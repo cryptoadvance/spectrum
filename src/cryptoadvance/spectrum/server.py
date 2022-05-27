@@ -54,6 +54,7 @@ def create_app(config):
             config["electrum"]["host"],
             config["electrum"]["port"],
             datadir=config["datadir"],
+            app=app,
         )
 
     return app

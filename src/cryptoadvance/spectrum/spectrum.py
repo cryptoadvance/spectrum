@@ -72,7 +72,8 @@ class Spectrum:
     roothash = ""  # hash of the 0'th block
     bestblockhash = ""  # hash of the current best block
 
-    def __init__(self, host="127.0.0.1", port=50001, datadir="data"):
+    def __init__(self, host="127.0.0.1", port=50001, datadir="data", app=None):
+        self.app = app
         self.host = host
         self.port = port
         self.datadir = datadir
@@ -229,9 +230,10 @@ class Spectrum:
             scripthash = params[0]
             state = params[1]
             print("SYNC", scripthash, "state", state)
-            scripts = Script.query.filter_by(scripthash=scripthash).all()
-            for sc in scripts:
-                self.sync_script(sc, state)
+            with self.app.app_context():
+                scripts = Script.query.filter_by(scripthash=scripthash).all()
+                for sc in scripts:
+                    self.sync_script(sc, state)
 
     def get_wallet(self, wallet_name):
         w = Wallet.query.filter_by(name=wallet_name).first()
@@ -577,18 +579,17 @@ class Spectrum:
         if not txs:
             raise RPCError("Invalid or non-wallet transaction id", -5)
         tx0 = txs[0]
+        confirmed = bool(tx0.height)
+        t = int(time.time()) if not confirmed else tx0.blocktime
         obj = {
-            "amount": 0.00000000,
+            "amount": sat_to_btc(sum([tx.amount for tx in txs])),
             "fee": 0,
             "confirmations": (self.blocks - tx0.height + 1) if tx0.height else 0,
-            "blockhash": tx0.blockhash,
-            "blockheight": tx0.height,
-            "blocktime": tx0.blocktime,
             "txid": txid,
             "walletconflicts": [],
-            "time": tx0.blocktime,
-            "timereceived": tx0.blocktime,
-            "bip125-replaceable": tx0.replaceable,
+            "time": t,
+            "timereceived": t,
+            "bip125-replaceable": "yes" if tx0.replaceable else "no",
             "details": [
                 {
                     "address": tx.script.address(self.network),
@@ -602,6 +603,16 @@ class Spectrum:
             ],
             "hex": str(tx),
         }
+        if confirmed:
+            obj.update(
+                {
+                    "blockhash": tx0.blockhash,
+                    "blockheight": tx0.height,
+                    "blocktime": tx0.blocktime,
+                }
+            )
+        else:
+            obj.update({"trusted": False})
         if verbose:
             pass  # add "decoded"
         return obj
@@ -716,6 +727,8 @@ class Spectrum:
                 "solvable": True,
                 "safe": utxo.height is not None,
                 "confirmations": (self.blocks - utxo.height + 1)
+                if utxo.height
+                else 0
                 if utxo.height is not None
                 else 0,
                 "address": utxo.script.address(self.network),
