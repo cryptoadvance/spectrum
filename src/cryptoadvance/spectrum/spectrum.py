@@ -772,6 +772,9 @@ class Spectrum:
         script = Script.query.filter_by(script=sc.data.hex()).first()
         if not script:
             return 0
+        # no transactions on this script
+        if script.state is None:
+            return 0
         (received,) = (
             db.session.query(
                 func.sum(Tx.amount).label("amount"),
