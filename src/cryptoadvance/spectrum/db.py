@@ -1,0 +1,147 @@
+from flask_sqlalchemy import SQLAlchemy
+from embit.descriptor import Descriptor as EmbitDescriptor
+from embit.descriptor.checksum import add_checksum
+from embit.script import Script as EmbitScript
+from enum import Enum
+
+db = SQLAlchemy()
+
+
+class TxCategory(Enum):
+    UNKNOWN = 0
+    RECEIVE = 1
+    SEND = 2
+    CHANGE = 3  # hidden
+
+    def __str__(self):
+        return self.name.lower()
+
+
+class Wallet(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    # maybe later User can be added to the wallet,
+    # so wallet name may not be unique
+    # value is like specter_hotstorage.../wallet_name_can_be_long
+    name = db.Column(db.String(200), unique=True)
+    private_keys_enabled = db.Column(db.Boolean, default=False)
+    # if non-empty, using hdseed, 32 bytes
+    # potentially encrypted, so some extra space here
+    seed = db.Column(db.String(200), nullable=True, default=None)
+    # salt for password if password is used, None if password is not used
+    password_salt = db.Column(db.String(100), nullable=True, default=None)
+
+    def get_descriptor(self, internal=False):
+        for desc in self.descriptors:
+            if desc.active and desc.internal == internal:
+                return desc
+
+    def get_keypool(self, internal=False):
+        # TODO
+        return 1000
+
+
+class Descriptor(db.Model):
+    """Descriptors tracked by the wallet"""
+
+    id = db.Column(db.Integer, primary_key=True)
+    wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
+    wallet = db.relationship("Wallet", backref=db.backref("descriptors", lazy=True))
+    # if we should use this descriptor for new addresses
+    active = db.Column(db.Boolean, default=True)
+    # if we should use it for change or receiving addresses
+    internal = db.Column(db.Boolean, default=False)
+    # descriptor itself, 15 cosigners, each xpub is 111 chars, plus derivation
+    # but 3k should be enough
+    descriptor = db.Column(db.String(3000), nullable=False)
+    # original descriptor with private keys (if private keys are enabled)
+    # potentially encrypted somehow
+    # reqiured for Specter's hot wallet storage
+    private_descriptor = db.Column(db.String(3000), nullable=True, default=None)
+    # address index used by the next getnewaddress() call
+    next_index = db.Column(db.Integer, default=0)
+
+    def getscriptpubkey(self, index=None):
+        if index is None:
+            index = self.next_index
+        d = EmbitDescriptor.from_string(self.private_descriptor or self.descriptor)
+        return d.derive(index).script_pubkey()
+
+    def derive(self, index):
+        d = EmbitDescriptor.from_string(self.private_descriptor or self.descriptor)
+        d = d.derive(index)
+        for k in d.keys:
+            k.key = k.key.get_public_key()
+        return add_checksum(str(d))
+
+    def get_descriptor(self, index=None):
+        """Returns Descriptor class"""
+        d = EmbitDescriptor.from_string(self.private_descriptor or self.descriptor)
+        if index is not None:
+            d = d.derive(index)
+        return d
+
+
+# We store script pubkeys instead of addresses as database is chain-agnostic
+class Script(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
+    wallet = db.relationship("Wallet", backref=db.backref("scripts", lazy=True))
+    # this must be nullable as we may need to label external scripts
+    descriptor_id = db.Column(
+        db.Integer, db.ForeignKey("descriptor.id"), nullable=True, default=None
+    )
+    descriptor = db.relationship("Descriptor", backref=db.backref("scripts", lazy=True))
+    # derivation index if it's our address
+    index = db.Column(db.Integer, nullable=True, default=None)
+
+    script = db.Column(db.String(100), nullable=False)
+    label = db.Column(db.String(500), nullable=True, default=None)
+    # scripthash for electrum subscribtions, store for lookups
+    scripthash = db.Column(db.String(64), nullable=True, default=None)
+    # electrum stuff - hash of all txs on the address
+    state = db.Column(db.String(64), nullable=True, default=None)
+    # confirmed balance in sat
+    confirmed = db.Column(db.BigInteger, default=0)
+    # unconfirmed balance in sat
+    unconfirmed = db.Column(db.BigInteger, default=0)
+
+    def address(self, network):
+        return self.script_pubkey.address(network)
+
+    @property
+    def script_pubkey(self):
+        return EmbitScript(bytes.fromhex(self.script))
+
+
+class UTXO(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    txid = db.Column(db.String(64))
+    vout = db.Column(db.Integer)
+    height = db.Column(db.Integer, default=None)
+    # amount in sat
+    amount = db.Column(db.BigInteger)
+    # frozen or not
+    locked = db.Column(db.Boolean, default=False)
+    # refs
+    script_id = db.Column(db.Integer, db.ForeignKey("script.id"))
+    script = db.relationship("Script", backref=db.backref("utxos", lazy=True))
+    wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
+    wallet = db.relationship("Wallet", backref=db.backref("utxos", lazy=True))
+
+
+class Tx(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    txid = db.Column(db.String(64))
+    blockhash = db.Column(db.String(64), default=None)
+    height = db.Column(db.Integer, default=None)
+    blocktime = db.Column(db.BigInteger, default=None)
+    replaceable = db.Column(db.Boolean, default=False)
+    category = db.Column(db.Enum(TxCategory), default=TxCategory.UNKNOWN)
+    vout = db.Column(db.Integer, default=None)
+    amount = db.Column(db.BigInteger, default=0)
+    fee = db.Column(db.BigInteger, default=None)  # only for send
+    # refs
+    script_id = db.Column(db.Integer, db.ForeignKey("script.id"))
+    script = db.relationship("Script", backref=db.backref("txs", lazy=True))
+    wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
+    wallet = db.relationship("Wallet", backref=db.backref("txs", lazy=True))
