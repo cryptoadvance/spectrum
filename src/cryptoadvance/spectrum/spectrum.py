@@ -229,6 +229,9 @@ class Spectrum:
             scripthash = params[0]
             state = params[1]
             print("SYNC", scripthash, "state", state)
+            scripts = Script.query.filter_by(scripthash=scripthash).all()
+            for sc in scripts:
+                self.sync_script(sc, state)
 
     def get_wallet(self, wallet_name):
         w = Wallet.query.filter_by(name=wallet_name).first()
@@ -916,13 +919,8 @@ class Spectrum:
         db.session.commit()
 
         # subscribe to all scripts in a thread to speed up creation of the wallet
-        t = threading.Thread(target=self._sync_descriptor, args=(d,))
-        t.daemon = True
-        t.start()
-        return d
-
-    def _sync_descriptor(self, descriptor):
         for sc in Script.query.filter_by(descriptor=d).all():
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
+        return d
