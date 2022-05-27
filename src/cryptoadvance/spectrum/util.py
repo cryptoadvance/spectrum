@@ -12,8 +12,10 @@ def scripthash(script):
 
 
 def sat_to_btc(sat):
+    sat = sat or 0  # if None is passed
     return round(sat * 1e-8, 8)
 
 
 def btc_to_sat(btc):
+    btc = btc or 0  # if None is passed
     return round(btc * 1e8)
