@@ -3,6 +3,8 @@ from embit.descriptor import Descriptor as EmbitDescriptor
 from embit.descriptor.checksum import add_checksum
 from embit.script import Script as EmbitScript
 from enum import Enum
+import time
+from .util import sat_to_btc
 
 db = SQLAlchemy()
 
@@ -145,3 +147,35 @@ class Tx(db.Model):
     script = db.relationship("Script", backref=db.backref("txs", lazy=True))
     wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
     wallet = db.relationship("Wallet", backref=db.backref("txs", lazy=True))
+
+    def to_dict(self, blockheight, network):
+        confirmed = bool(self.height)
+        confs = (blockheight - self.height + 1) if self.height else 0
+        t = self.blocktime if confirmed else int(time.time())
+        obj = {
+            "address": self.script.address(network),
+            "category": str(self.category),
+            "amount": sat_to_btc(self.amount),
+            "label": "",
+            "vout": self.vout,
+            "confirmations": confs,
+            "txid": self.txid,
+            "time": t,
+            "timereceived": t,
+            "walletconflicts": [],
+            "bip125-replaceable": "yes" if self.replaceable else "no",
+            "script_id": self.script_id,
+        }
+        if self.category == TxCategory.SEND:
+            obj.update({"fee": -sat_to_btc(self.fee or 0)})
+        if confirmed:
+            obj.update(
+                {
+                    "blockhash": self.blockhash,
+                    "blockheight": self.height,
+                    "blocktime": t,
+                }
+            )
+        else:
+            obj.update({"trusted": False})
+        return obj

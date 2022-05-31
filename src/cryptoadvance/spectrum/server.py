@@ -1,5 +1,5 @@
 from flask import Flask, request, g
-from .db import db
+from .db import db, Script
 from .spectrum import Spectrum
 
 import json
@@ -61,12 +61,13 @@ def create_app(config):
 
 
 def main():
+    # TODO: debug=True spawns two Electrum servers and this causes duplications in transactions
     config = {
         "datadir": "data",
         "database": os.path.abspath(os.path.join("data", "wallets.sqlite")),
         "host": "127.0.0.1",
         "port": 8081,
-        "debug": True,
+        "debug": False,
         "electrum": {
             "host": "127.0.0.1",
             "port": 60401,  # 50000,

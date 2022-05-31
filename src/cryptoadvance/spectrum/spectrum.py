@@ -17,6 +17,8 @@ from .db import db, Wallet, Descriptor, Script, Tx, UTXO, TxCategory
 from sqlalchemy.sql import func
 import traceback
 import threading
+import json
+import requests
 
 # a set of registered rpc calls that do not need a wallet
 RPC_METHODS = set()
@@ -140,7 +142,12 @@ class Spectrum:
         for tx in txs:
             # update existing - set height
             if tx["tx_hash"] in db_txs:
+                tx_details = self.sock.call(
+                    "blockchain.transaction.get", [tx["tx_hash"], True]
+                )
                 db_txs[tx["tx_hash"]].height = tx.get("height")
+                db_txs[tx["tx_hash"]].blockhash = tx_details.get("blockhash")
+                db_txs[tx["tx_hash"]].blocktime = tx_details.get("blocktime")
             # new tx
             else:
                 tx_details = self.sock.call(
@@ -177,7 +184,7 @@ class Spectrum:
                     category=category,
                     vout=vout,
                     amount=amount,
-                    fee=0,  # TODO: not sure how to get the fee effectively
+                    fee=tx.get("fee", 0),
                     # refs
                     script=script,
                     wallet=script.wallet,
@@ -583,7 +590,6 @@ class Spectrum:
         t = int(time.time()) if not confirmed else tx0.blocktime
         obj = {
             "amount": sat_to_btc(sum([tx.amount for tx in txs])),
-            "fee": 0,
             "confirmations": (self.blocks - tx0.height + 1) if tx0.height else 0,
             "txid": txid,
             "walletconflicts": [],
@@ -603,6 +609,8 @@ class Spectrum:
             ],
             "hex": str(tx),
         }
+        if "send" in [d["category"] for d in obj["details"]]:
+            obj.update({"fee": -sat_to_btc(tx0.fee or 0)})
         if confirmed:
             obj.update(
                 {
@@ -631,25 +639,7 @@ class Spectrum:
             .limit(count)
             .all()
         )
-        return [
-            {
-                "address": tx.script.address(self.network),
-                "category": str(tx.category),
-                "amount": sat_to_btc(tx.amount),
-                "label": "",
-                "vout": tx.vout,
-                "confirmations": (self.blocks - tx.height + 1) if tx.height else 0,
-                "blockhash": tx.blockhash,
-                "blockheight": tx.height,
-                "blocktime": tx.blocktime,
-                "txid": tx.txid,
-                "time": tx.blocktime,
-                "timereceived": tx.blocktime,
-                "walletconflicts": [],
-                "bip125-replaceable": "yes" if tx.replaceable else "no",
-            }
-            for tx in txs
-        ]
+        return [tx.to_dict(self.blocks, self.network) for tx in txs]
 
     def _get_balance(self, wallet):
         """Returns a tuple: (confirmed, unconfirmed) in sats"""

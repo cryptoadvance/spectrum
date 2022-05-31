@@ -17,13 +17,31 @@ class ElectrumSocket:
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.connect((host, port))
         self._results = {}  # store results of the calls here
+        self._requests = []
+        self._notifications = []
         self._recv_thread = threading.Thread(target=self.recv_loop)
         self._recv_thread.daemon = True
         self._recv_thread.start()
+        self._write_thread = threading.Thread(target=self.write_loop)
+        self._write_thread.daemon = True
+        self._write_thread.start()
         self._ping_thread = threading.Thread(target=self.ping_loop)
         self._ping_thread.daemon = True
         self._ping_thread.start()
+        self._notify_thread = threading.Thread(target=self.notify_loop)
+        self._notify_thread.daemon = True
+        self._notify_thread.start()
         self._waiting = False
+
+    def write_loop(self):
+        while self.running:
+            while self._requests:
+                try:
+                    req = self._requests.pop()
+                    self._socket.sendall(json.dumps(req).encode() + b"\n")
+                except Exception as e:
+                    print("Error in write", e)
+            time.sleep(0.01)
 
     def ping_loop(self):
         while self.running:
@@ -44,14 +62,21 @@ class ElectrumSocket:
     def recv(self):
         while self.running:
             data = self._socket.recv(2048)
-            if not data.endswith(b"\n"):
+            while not data.endswith(b"\n"):
                 data += self._socket.recv(2048)
             arr = [json.loads(d.decode()) for d in data.strip().split(b"\n") if d]
             for response in arr:
                 if "method" in response:  # notification
-                    self.notify(response)
+                    self._notifications.append(response)
                 if "id" in response:  # request
                     self._results[response["id"]] = response
+
+    def notify_loop(self):
+        while self.running:
+            while self._notifications:
+                data = self._notifications.pop()
+                self.notify(data)
+            time.sleep(0.02)
 
     def notify(self, data):
         self._waiting = False  # any notification resets waiting
@@ -66,7 +91,7 @@ class ElectrumSocket:
     def call(self, method, params=[]):
         uid = random.randint(0, 1 << 32)
         obj = {"jsonrpc": "2.0", "method": method, "params": params, "id": uid}
-        self._socket.sendall(json.dumps(obj).encode() + b"\n")
+        self._requests.append(obj)
         while uid not in self._results:  # wait for response
             time.sleep(0.01)
         res = self._results.pop(uid)
