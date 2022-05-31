@@ -10,15 +10,17 @@ from embit.script import Witness
 from embit.descriptor.checksum import add_checksum
 from embit.networks import NETWORKS
 from embit.transaction import Transaction as EmbitTransaction
+from embit.transaction import TransactionInput, TransactionOutput
 from embit.psbt import PSBT, DerivationPath
 from embit.finalizer import finalize_psbt
-from .util import get_blockhash, scripthash, sat_to_btc
+from .util import get_blockhash, scripthash, sat_to_btc, btc_to_sat
 from .db import db, Wallet, Descriptor, Script, Tx, UTXO, TxCategory
 from sqlalchemy.sql import func
 import traceback
 import threading
 import json
-import requests
+import random
+import math
 
 # a set of registered rpc calls that do not need a wallet
 RPC_METHODS = set()
@@ -808,7 +810,18 @@ class Spectrum:
                 )
         return str(PSBT(tx))
 
-    def _fill_scope(self, scope, script):
+    def _fill_scope(self, scope, script, add_utxo=False):
+        if add_utxo:
+            tx = self._get_tx(scope.txid.hex())
+            if tx is not None:
+                is_segwit = tx.is_segwit
+                # clear witness
+                for vin in tx.vin:
+                    vin.witness = Witness()
+                scope.non_witness_utxo = tx
+                vout = tx.vout[scope.vout]
+                if is_segwit:
+                    scope.witness_utxo = vout
         d = script.descriptor.get_descriptor(script.index)
         scope.witness_script = d.witness_script()
         scope.redeem_script = d.redeem_script()
@@ -818,28 +831,124 @@ class Spectrum:
             )
 
     @walletrpc
+    def walletcreatefundedpsbt(
+        self, wallet, inputs=[], outputs=[], locktime=0, options={}, bip32derivs=True
+    ):
+        # we need to add more inputs if it's in options or if inputs are empty
+        add_inputs = options.get("add_inputs", not bool(inputs))
+        include_unsafe = options.get("include_unsafe", False)
+        changeAddress = options.get("changeAddress", None)
+        if changeAddress is None:
+            desc = wallet.get_descriptor(internal=True)
+            if not desc:
+                raise RPCError("No active descriptors", -500)
+            changeAddress = desc.getscriptpubkey().address(self.network)
+        changePosition = options.get("changePosition", None)
+        lockUnspents = options.get("lockUnspents", False)
+        fee_rate = options.get("fee_rate", options.get("feeRate", 0) * 1e5)
+        subtractFeeFromOutputs = options.get("subtractFeeFromOutputs", [])
+        conf_target = options.get("conf_target", 6)
+        replaceable = options.get("replaceable", False)
+        if not fee_rate:
+            fee_rate = self.sock.call("blockchain.estimatefee", [conf_target]) * 1e5
+            if fee_rate < 0:
+                fee_rate = 1
+        destinations = []
+        for out in outputs:
+            for addr, amount in out.items():
+                destinations.append(
+                    TransactionOutput(
+                        btc_to_sat(amount), EmbitScript.from_address(addr)
+                    )
+                )
+        # don't add change out for now, just keep it here
+        changeOut = TransactionOutput(0, EmbitScript.from_address(changeAddress))
+        # get utxos from inputs
+        inputs = [
+            UTXO.query.filter_by(
+                wallet=wallet, txid=inp["txid"], vout=inp["vout"]
+            ).first()
+            for inp in inputs
+        ]
+        if None in inputs:
+            raise RPCError("Insufficient funds", -4)  # wrong utxo is provided in inputs
+        sum_outs = sum([out.value for out in destinations])
+        sum_ins = sum([inp.amount for inp in inputs])
+        utxos = UTXO.query.filter_by(wallet=wallet, locked=False).order_by(
+            UTXO.amount.desc()
+        )
+        tx = EmbitTransaction(
+            vin=[TransactionInput(bytes.fromhex(inp.txid), inp.vout) for inp in inputs],
+            vout=destinations,
+            locktime=locktime,
+        )
+        sz = len(tx.serialize())
+        # TODO: proper coin selection
+        if add_inputs and sum_ins < (sum_outs + sz * fee_rate):
+            for utxo in utxos:
+                if not include_unsafe and not bool(utxo.height):
+                    continue
+                if utxo not in inputs:
+                    inputs.append(utxo)
+                    txin = TransactionInput(bytes.fromhex(utxo.txid), utxo.vout)
+                    tx.vin.append(txin)
+                    sz += len(txin.serialize())
+                    sum_ins += utxo.amount
+                if sum_ins >= (sum_outs + sz * fee_rate):
+                    break
+        if sum_ins < sum_outs:
+            raise RPCError(f"Insufficient funds", -4)
+        if not subtractFeeFromOutputs and sum_ins < (sum_outs + sz * fee_rate):
+            raise RPCError(f"Insufficient funds", -4)
+        change_amount = int(
+            sum_ins - sum_outs - (sz + len(changeOut.serialize())) * fee_rate
+        )
+        # if it makes sense to add change output
+        changepos = -1
+        if change_amount > 0:
+            changeOut.value = sum_ins - sum_outs  # we don't subtract fee right now
+            tx.vout.insert(
+                changePosition or random.randint(0, len(tx.vout) + 1), changeOut
+            )
+            changepos = tx.vout.index(changeOut)
+        fee = math.ceil(len(tx.serialize()) * fee_rate)
+        # subtract fee
+        if subtractFeeFromOutputs:
+            for idx in subtractFeeFromOutputs:
+                tx.vout[idx].value -= math.ceil(fee / len(subtractFeeFromOutputs))
+        elif changepos >= 0:
+            tx.vout[changepos].value -= fee
+        # set rbf if requested
+        if replaceable:
+            for inp in tx.vin:
+                inp.sequence = 0xFFFFFFFD
+        psbt = PSBT(tx)
+        for i, inp in enumerate(psbt.inputs):
+            self._fill_scope(inp, inputs[i].script, add_utxo=True)
+        if changepos >= 0:
+            sc = Script.query.filter_by(
+                wallet=wallet, script=psbt.outputs[changepos].script_pubkey.data.hex()
+            ).first()
+            if sc:
+                self._fill_scope(psbt.outputs[changepos], sc)
+        if lockUnspents:
+            for inp in inputs:
+                inp.locked = True
+            db.session.commit()
+        return {"psbt": str(psbt), "fee": sat_to_btc(fee), "changepos": changepos}
+
+    @walletrpc
     def walletprocesspsbt(self, wallet, psbt, sign=True, sighashtype=None):
         psbt = PSBT.from_string(psbt)
         # fill inputs
         for inp in psbt.inputs:
-            tx = self._get_tx(inp.txid.hex())
-            if tx is None:
-                continue
-            is_segwit = tx.is_segwit
-            # clear witness
-            for vin in tx.vin:
-                vin.witness = Witness()
-            inp.non_witness_utxo = tx
-            vout = tx.vout[inp.vout]
-            if is_segwit:
-                inp.witness_utxo = vout
             sc = Script.query.filter(
                 Script.wallet == wallet,
                 Script.index.isnot(None),
                 Script.script == vout.script_pubkey.data.hex(),
             ).first()
             if sc:
-                self._fill_scope(inp, sc)
+                self._fill_scope(inp, sc, add_utxo=True)
         # fill outputs
         for out in psbt.outputs:
             sc = Script.query.filter(
