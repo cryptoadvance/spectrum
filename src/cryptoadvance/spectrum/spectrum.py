@@ -436,6 +436,45 @@ class Spectrum:
             "blocks": conf_target,
         }
 
+    @rpc
+    def combinepsbt(self, txs):
+        if not txs:
+            raise RPCError("Parameter 'txs' cannot be empty", -8)
+        psbt = PSBT.from_string(txs[0])
+        for tx in txs[1::]:
+            other = PSBT.from_string(tx)
+            psbt.xpubs.update(other.xpubs)
+            psbt.unknown.update(other.unknown)
+            for i, inp in enumerate(other.inputs):
+                psbt.inputs[i].update(inp)
+            for i, out in enumerate(other.outputs):
+                psbt.outputs[i].update(out)
+        return str(psbt)
+
+    @rpc
+    def finalizepsbt(self, psbt, extract=True):
+        psbt = PSBT.from_string(psbt)
+        tx = finalize_psbt(psbt)
+        if tx:
+            if extract:
+                return {"hex": str(tx), "complete": True}
+            else:
+                return {"psbt": str(psbt), "complete": True}
+        return {"psbt": str(psbt), "complete": False}
+
+    @rpc
+    def testmempoolaccept(self, rawtxs, maxfeerate=0.1):
+        # TODO: electrum doesn't have this method, we need to verify txs somehow differently
+        # also missing txid and other stuff here
+        return [{"allowed": True} for tx in rawtxs]
+
+    @rpc
+    def sendrawtransaction(self, hexstring, maxfeerate=0.1):
+        res = self.sock.call("blockchain.transaction.broadcast", [hexstring])
+        if len(res) != 64:
+            raise RPCError(res)
+        return res
+
     # ========== WALLETS RPC CALLS ==========
 
     @rpc
@@ -942,13 +981,24 @@ class Spectrum:
         psbt = PSBT.from_string(psbt)
         # fill inputs
         for inp in psbt.inputs:
+            tx = self._get_tx(inp.txid.hex())
+            if tx is None:
+                continue
+            is_segwit = tx.is_segwit
+            # clear witness
+            for vin in tx.vin:
+                vin.witness = Witness()
+            inp.non_witness_utxo = tx
+            vout = tx.vout[inp.vout]
+            if is_segwit:
+                inp.witness_utxo = vout
             sc = Script.query.filter(
                 Script.wallet == wallet,
                 Script.index.isnot(None),
                 Script.script == vout.script_pubkey.data.hex(),
             ).first()
             if sc:
-                self._fill_scope(inp, sc, add_utxo=True)
+                self._fill_scope(inp, sc)
         # fill outputs
         for out in psbt.outputs:
             sc = Script.query.filter(
@@ -960,7 +1010,7 @@ class Spectrum:
                 self._fill_scope(out, sc)
         complete = False
         if sign:
-            pass
+            pass  # TODO: sign
         res = str(psbt)
         try:
             if finalize_psbt(PSBT.from_string(res)):
