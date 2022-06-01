@@ -14,6 +14,7 @@ def create_app(config):
         os.makedirs(config["datadir"])
 
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{config['database']}"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # 32 bytes generated from us.random
     # TODO: generate at start

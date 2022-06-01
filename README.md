@@ -11,10 +11,8 @@ Then connect Specter-Desktop to rpc port 8081 with any credentials
 
 ## TODO:
 
-- properly process notifications with multiple scripts
-- psbt functionality
-- refill keypool when address is used
-
+- refill keypool when address is used or new address is requested
+- flask `debug=True` flag creates two electrum sockets that notify twice - this causes duplications in the database
 - load from `config.toml`, cli args and env vars
 - reconnect with electrum on disconnect
 - add support for credentials / cookie file for RPC calls

@@ -454,7 +454,11 @@ class Spectrum:
     @rpc
     def finalizepsbt(self, psbt, extract=True):
         psbt = PSBT.from_string(psbt)
-        tx = finalize_psbt(psbt)
+        tx = None
+        try:
+            tx = finalize_psbt(psbt)
+        except Exception as e:
+            print(e)
         if tx:
             if extract:
                 return {"hex": str(tx), "complete": True}
@@ -1009,8 +1013,9 @@ class Spectrum:
             if sc:
                 self._fill_scope(out, sc)
         complete = False
-        if sign:
-            pass  # TODO: sign
+        if sign and wallet.private_keys_enabled:
+            for d in wallet.descriptors:
+                psbt.sign_with(d.get_descriptor())
         res = str(psbt)
         try:
             if finalize_psbt(PSBT.from_string(res)):
