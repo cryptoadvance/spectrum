@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from functools import wraps
@@ -13,7 +14,7 @@ from embit.transaction import Transaction as EmbitTransaction
 from embit.transaction import TransactionInput, TransactionOutput
 from embit.psbt import PSBT, DerivationPath
 from embit.finalizer import finalize_psbt
-from .util import get_blockhash, scripthash, sat_to_btc, btc_to_sat
+from .util import get_blockhash, handle_exception, scripthash, sat_to_btc, btc_to_sat
 from .db import db, Wallet, Descriptor, Script, Tx, UTXO, TxCategory
 from sqlalchemy.sql import func
 import traceback
@@ -21,6 +22,8 @@ import threading
 import json
 import random
 import math
+
+logger = logging.getLogger(__name__)
 
 # a set of registered rpc calls that do not need a wallet
 RPC_METHODS = set()
@@ -76,7 +79,7 @@ class Spectrum:
     roothash = ""  # hash of the 0'th block
     bestblockhash = ""  # hash of the current best block
 
-    def __init__(self, host="127.0.0.1", port=50001, datadir="data", app=None):
+    def __init__(self, host="127.0.0.1", port=50001, datadir="data", app=None, ssl=False):
         self.app = app
         self.host = host
         self.port = port
@@ -85,13 +88,16 @@ class Spectrum:
             os.makedirs(self.txdir)
         try:
             self.sock = ElectrumSocket(
-                host=host, port=port, callback=self.process_notification
+                host=host, port=port, callback=self.process_notification, use_ssl=ssl
             )
-        except:
+        except Exception as e:
+            handle_exception(e)
+            logger.error("Proceeding in offline-Mode")
             self.sock = None  # offline mode
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
+        logger.info("Syncing ...")
         self.sync()
 
     @property
@@ -101,11 +107,11 @@ class Spectrum:
     def sync(self):
         if not self.sock:
             return
-        # subscribe to block headers
+        logger.info("subscribe to block headers")
         res = self.sock.call("blockchain.headers.subscribe")
         self.blocks = res["height"]
         self.bestblockhash = get_blockhash(res["hex"])
-        # detect chain from header
+        logger.info("detect chain from header")
         rootheader = self.sock.call("blockchain.block.header", [0])
         self.roothash = get_blockhash(rootheader)
         self.chain = ROOT_HASHES.get(self.roothash, "regtest")
@@ -114,6 +120,7 @@ class Spectrum:
             # ignore external scripts (labeled recepients)
             if sc.index is None:
                 continue
+            logger.info(f"subscribe to scripthash {sc.scripthash}")
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
@@ -563,6 +570,7 @@ class Spectrum:
                 self.importdescriptor(wallet, **request)
                 result = {"success": True}
             except Exception as e:
+                handle_exception(e)
                 result = {"success": False, "error": {"code": -500, "message": str(e)}}
             results.append(result)
         return results

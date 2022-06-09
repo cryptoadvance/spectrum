@@ -1,24 +1,25 @@
-from flask import Flask, request, g
-from .db import db, Script
-from .spectrum import Spectrum
-
 import json
+import logging
 import os
 
+from flask import Flask, g, request
 
-def create_app(config):
+from .db import Script, db
+from .spectrum import Spectrum
+
+logger = logging.getLogger(__name__)
+
+def create_app(config="cryptoadvance.spectrum.config.LocalElectrumConfig"):
+    if os.environ.get("CONFIG"):
+        config = os.environ.get("CONFIG")
     app = Flask(__name__)
+    app.config.from_object(config)
+    logger.info(f"config: {config}")
 
     # create folder if doesn't exist
-    if not os.path.exists(config["datadir"]):
-        os.makedirs(config["datadir"])
+    if not os.path.exists(app.config["DATADIR"]):
+        os.makedirs(app.config["DATADIR"])
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{config['database']}"
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # 32 bytes generated from us.random
-    # TODO: generate at start
-    app.config["SECRET_KEY"] = "feoj49j(*$I$NGO4f380jfkosf024m8ODFKv"
     db.init_app(app)
 
     @app.route("/", methods=["GET", "POST"])
@@ -44,18 +45,33 @@ def create_app(config):
                 [app.spectrum.jsonrpc(item, wallet_name=wallet_name) for item in data]
             )
 
+    @app.route("/healthz/liveness")
+    def liveness():
+        return {"message": "i am alive"}
+
+    @app.route("/healthz/readyness")
+    def readyness():
+        try:
+            # Probably improvable:
+            assert app.spectrum.sock is not None
+        except Exception as e:
+            return {"message": "i am not ready"}, 500
+        return {"message": "i am ready"}
+
     # create database if doesn't exist
-    if not os.path.exists(config["database"]):
+    if not os.path.exists(app.config["DATABASE"]):
         with app.app_context():
             db.create_all()
 
     with app.app_context():
         # if not getattr(g, "electrum", None):
+        logger.info("Creating Spectrum Object ...")
         app.spectrum = Spectrum(
-            config["electrum"]["host"],
-            config["electrum"]["port"],
-            datadir=config["datadir"],
+            app.config["ELECTRUM_HOST"],
+            app.config["ELECTRUM_PORT"],
+            datadir=app.config["DATADIR"],
             app=app,
+            ssl=app.config["ELECTRUM_USES_SSL"]
         )
 
     return app
