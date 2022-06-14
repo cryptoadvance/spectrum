@@ -7,7 +7,7 @@ RUN pip install -r requirements.txt
 
 WORKDIR /usr/src/app
 ENV PYTHONUNBUFFERED 1
-EXPOSE 8080
+EXPOSE 8081
 
 COPY . .
 RUN mkdir /home/.ssh

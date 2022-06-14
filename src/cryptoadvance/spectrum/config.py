@@ -17,12 +17,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 def _get_bool_env_var(varname, default=None):
-
     value = os.environ.get(varname, default)
-
     if value is None:
         return False
-    elif isinstance(value, str) and value.lower() == 'false':
+    elif isinstance(value, str) and value.strip().lower() == 'false':
         return False
     elif bool(value) is False:
         return False
@@ -61,13 +59,13 @@ class LocalElectrumLiteConfig(BaseConfig):
 
 class LiteConfig(BaseConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
-    ELECTRUM_PORT=os.environ.get('ELECTRUM_PORT', default='50002')
-    ELECTRUM_USES_SSL=_get_bool_env_var(os.environ.get('ELECTRUM_USES_SSL', default="true"))
+    ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
+    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
 
 class PostgresConfig(PostgresBasedConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
-    ELECTRUM_PORT=os.environ.get('ELECTRUM_PORT', default='50002')
-    ELECTRUM_USES_SSL=_get_bool_env_var(os.environ.get('ELECTRUM_USES_SSL', default="true"))
+    ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
+    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
 
 class ProductionConfig(PostgresBasedConfig):
     SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(16))

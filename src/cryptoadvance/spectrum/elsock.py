@@ -19,6 +19,7 @@ class ElectrumSocket:
         self._callback = callback
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if use_ssl:
+            logger.info(f"Using ssl while connectiong to {self._socket}")
             self._socket = ssl.wrap_socket(self._socket)
         self._socket.connect((host, port))
         self._results = {}  # store results of the calls here

@@ -22,6 +22,15 @@ def create_app(config="cryptoadvance.spectrum.config.LocalElectrumConfig"):
 
     db.init_app(app)
 
+    app.logger.info("-------------------------CONFIGURATION-OVERVIEW------------")
+    app.logger.info("Config from "+os.environ.get("CONFIG","empty"))
+    for key, value in sorted(app.config.items()):
+        if key in ["DB_PASSWORD","SECRET_KEY","SQLALCHEMY_DATABASE_URI"]:
+            app.logger.info("{} = {}".format(key,"xxxxxxxxxxxx"))
+        else:
+            app.logger.info("{} = {}".format(key,value))
+    app.logger.info("-----------------------------------------------------------")
+
     @app.route("/", methods=["GET", "POST"])
     def index():
         if request.method == "GET":
