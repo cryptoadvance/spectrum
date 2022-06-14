@@ -59,15 +59,15 @@ class LocalElectrumLiteConfig(BaseConfig):
     ELECTRUM_HOST="127.0.0.1"
     ELECTRUM_PORT=60401
 
-class EmzyLiteConfig(BaseConfig):
-    ELECTRUM_HOST="electrum.emzy.de"
-    ELECTRUM_PORT=50002
-    ELECTRUM_USES_SSL=True
+class LiteConfig(BaseConfig):
+    ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
+    ELECTRUM_PORT=os.environ.get('ELECTRUM_PORT', default='50002')
+    ELECTRUM_USES_SSL=_get_bool_env_var(os.environ.get('ELECTRUM_USES_SSL', default="true"))
 
-class EmzyPostgresConfig(PostgresBasedConfig):
-    ELECTRUM_HOST="electrum.emzy.de"
-    ELECTRUM_PORT=50002
-    ELECTRUM_USES_SSL=True
+class PostgresConfig(PostgresBasedConfig):
+    ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
+    ELECTRUM_PORT=os.environ.get('ELECTRUM_PORT', default='50002')
+    ELECTRUM_USES_SSL=_get_bool_env_var(os.environ.get('ELECTRUM_USES_SSL', default="true"))
 
 class ProductionConfig(PostgresBasedConfig):
     SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(16))

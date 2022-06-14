@@ -58,10 +58,8 @@ def create_app(config="cryptoadvance.spectrum.config.LocalElectrumConfig"):
             return {"message": "i am not ready"}, 500
         return {"message": "i am ready"}
 
-    # create database if doesn't exist
-    if not os.path.exists(app.config["DATABASE"]):
-        with app.app_context():
-            db.create_all()
+    with app.app_context():
+        db.create_all()
 
     with app.app_context():
         # if not getattr(g, "electrum", None):
