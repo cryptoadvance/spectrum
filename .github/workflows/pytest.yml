@@ -22,6 +22,6 @@ jobs:
           pip install pytest pytest-md pytest-emoji
       - uses: pavelzw/pytest-action@v1
         with:
-          emoji: true
+          emoji: false
           verbose: false
           job_summary: true
