@@ -1,27 +1,29 @@
+import json
 import logging
+import math
 import os
+import random
+import threading
 import time
+import traceback
 from functools import wraps
 
-from .elsock import ElectrumSocket
 from embit import bip32
 from embit.descriptor import Descriptor as EmbitDescriptor
+from embit.descriptor.checksum import add_checksum
+from embit.finalizer import finalize_psbt
+from embit.networks import NETWORKS
+from embit.psbt import PSBT, DerivationPath
 from embit.script import Script as EmbitScript
 from embit.script import Witness
-from embit.descriptor.checksum import add_checksum
-from embit.networks import NETWORKS
 from embit.transaction import Transaction as EmbitTransaction
 from embit.transaction import TransactionInput, TransactionOutput
-from embit.psbt import PSBT, DerivationPath
-from embit.finalizer import finalize_psbt
-from .util import get_blockhash, handle_exception, scripthash, sat_to_btc, btc_to_sat
-from .db import db, Wallet, Descriptor, Script, Tx, UTXO, TxCategory
 from sqlalchemy.sql import func
-import traceback
-import threading
-import json
-import random
-import math
+
+from .db import UTXO, Descriptor, Script, Tx, TxCategory, Wallet, db
+from .elsock import ElectrumSocket
+from .util import (FlaskThread, btc_to_sat, get_blockhash, handle_exception, sat_to_btc,
+                   scripthash)
 
 logger = logging.getLogger(__name__)
 
@@ -97,14 +99,13 @@ class Spectrum:
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
-        logger.info("Syncing ...")
-        self.sync()
 
     @property
     def txdir(self):
         return os.path.join(self.datadir, "txs")
 
-    def sync(self):
+    def _sync(self):
+        logger.info("Syncing ...")
         if not self.sock:
             return
         logger.info("subscribe to block headers")
@@ -124,6 +125,15 @@ class Spectrum:
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
+    
+    def sync(self, asyncc=True):
+        if asyncc:
+            t = FlaskThread(
+                target=self._sync,
+            )
+            t.start()
+        else:
+            self._sync()
 
     def sync_script(self, script, state=None):
         # Normally every script has 1-2 transactions and 0-1 utxos,

@@ -29,4 +29,4 @@ def server( port, host, cert, key, config):
     
     app = create_app(config)
     logger.info("Starting up ...")
-    app.run(debug=debug, port=app.config["PORT"], host=app.config["HOST"])
+    app.run(debug=debug, port=app.config["PORT"], host=host)

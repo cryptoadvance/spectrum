@@ -13,4 +13,4 @@ COPY . .
 RUN mkdir /home/.ssh
 
 RUN pip3 install -r requirements.txt && pip3 install -e .
-CMD [ "python3", "-m", "cryptoadvance.spectrum", "server", "--config", "cryptoadvance.spectrum.config.EmzyConfig" ]
+CMD [ "python3", "-m", "cryptoadvance.spectrum", "server", "--config", "cryptoadvance.spectrum.config.PostgresConfig", "--host", "0.0.0.0"]

@@ -1,6 +1,9 @@
 import logging
+from threading import Thread
+
 from embit import hashes
 from embit.script import address_to_scriptpubkey
+from flask import current_app as app
 
 logger = logging.getLogger(__name__)
 
@@ -29,3 +32,16 @@ def handle_exception(exception):
     logger.error("----START-TRACEBACK-----------------------------------------------------------------")
     logger.exception(exception)    # the exception instance
     logger.error("----END---TRACEBACK-----------------------------------------------------------------")
+
+class FlaskThread(Thread):
+    ''' A FlaskThread passes the applicationcontext to the new thread in order to make stuff working seamlessly in new threadsS
+        copied from https://stackoverflow.com/questions/39476889/use-flask-current-app-logger-inside-threading '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app = app._get_current_object()
+
+    def run(self):
+        logger.debug("New thread started"+str(self._target))
+        logger.debug(self.app)
+        with self.app.app_context():
+            super().run()
