@@ -67,5 +67,8 @@ class PostgresConfig(PostgresBasedConfig):
     ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
 
+class TestConfig(LiteConfig):
+    pass
+
 class ProductionConfig(PostgresBasedConfig):
     SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(16))

@@ -92,9 +92,8 @@ class Spectrum:
             self.sock = ElectrumSocket(
                 host=host, port=port, callback=self.process_notification, use_ssl=ssl
             )
-        except Exception as e:
-            handle_exception(e)
-            logger.error("Proceeding in offline-Mode")
+        except ConnectionRefusedError as e:
+            logger.error("Connection refused: Proceeding in offline-Mode")
             self.sock = None  # offline mode
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid

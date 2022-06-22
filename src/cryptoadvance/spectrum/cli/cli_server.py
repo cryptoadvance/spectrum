@@ -1,6 +1,6 @@
 import logging
 import os
-from ..server import create_app
+from ..server import create_app, init_app
 import click
 
 logger = logging.getLogger(__name__)
@@ -28,5 +28,6 @@ def server( port, host, cert, key, config):
     logger.info(f"DEBUG is {debug}")
     
     app = create_app(config)
+    init_app(app)
     logger.info("Starting up ...")
     app.run(debug=debug, port=app.config["PORT"], host=host)

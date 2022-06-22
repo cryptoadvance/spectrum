@@ -49,9 +49,11 @@ def create_app(config="cryptoadvance.spectrum.config.LocalElectrumConfig"):
             app=app,
             ssl=app.config["ELECTRUM_USES_SSL"]
         )
-        app.spectrum.sync()
-
     return app
+
+def init_app(app):
+    with app.app_context():
+        app.spectrum.sync()
 
 
 def main():
