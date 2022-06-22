@@ -6,6 +6,8 @@ from flask import Flask, g, request
 
 from .db import Script, db
 from .spectrum import Spectrum
+from .server_endpoints.core_api import core_api
+from .server_endpoints.healthz import healthz
 
 logger = logging.getLogger(__name__)
 
@@ -31,41 +33,8 @@ def create_app(config="cryptoadvance.spectrum.config.LocalElectrumConfig"):
             app.logger.info("{} = {}".format(key,value))
     app.logger.info("-----------------------------------------------------------")
 
-    @app.route("/", methods=["GET", "POST"])
-    def index():
-        if request.method == "GET":
-            return "JSONRPC server handles only POST requests"
-        data = request.get_json()
-        if isinstance(data, dict):
-            return json.dumps(app.spectrum.jsonrpc(data))
-        if isinstance(data, list):
-            return json.dumps([app.spectrum.jsonrpc(item) for item in data])
-
-    @app.route("/wallet/", methods=["GET", "POST"])
-    @app.route("/wallet/<path:wallet_name>", methods=["GET", "POST"])
-    def walletrpc(wallet_name=""):
-        if request.method == "GET":
-            return "JSONRPC server handles only POST requests"
-        data = request.get_json()
-        if isinstance(data, dict):
-            return json.dumps(app.spectrum.jsonrpc(data, wallet_name=wallet_name))
-        if isinstance(data, list):
-            return json.dumps(
-                [app.spectrum.jsonrpc(item, wallet_name=wallet_name) for item in data]
-            )
-
-    @app.route("/healthz/liveness")
-    def liveness():
-        return {"message": "i am alive"}
-
-    @app.route("/healthz/readyness")
-    def readyness():
-        try:
-            # Probably improvable:
-            assert app.spectrum.sock is not None
-        except Exception as e:
-            return {"message": "i am not ready"}, 500
-        return {"message": "i am ready"}
+    app.register_blueprint(core_api)
+    app.register_blueprint(healthz)
 
     with app.app_context():
         db.create_all()
