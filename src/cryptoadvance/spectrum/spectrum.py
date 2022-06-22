@@ -255,7 +255,7 @@ class Spectrum:
         if method == "blockchain.scripthash.subscribe":
             scripthash = params[0]
             state = params[1]
-            print("SYNC", scripthash, "state", state)
+            logger.info("SYNC", scripthash, "state", state)
             with self.app.app_context():
                 scripts = Script.query.filter_by(scripthash=scripthash).all()
                 for sc in scripts:
@@ -1102,10 +1102,22 @@ class Spectrum:
             )
             db.session.add(sc)
         db.session.commit()
+        return d
 
+    def subcribe_scripts(self, descriptor, asyncc=True):
+        if asyncc:
+            t = FlaskThread(
+                target=self._subcribe_scripts,
+                args=[descriptor,]
+            )
+            t.start()
+        else:
+            self._subcribe_scripts(descriptor)
+
+    def _subcribe_scripts(self, descriptor) -> None:
         # subscribe to all scripts in a thread to speed up creation of the wallet
-        for sc in Script.query.filter_by(descriptor=d).all():
+        for sc in Script.query.filter_by(descriptor=descriptor).all():
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
-        return d
+
