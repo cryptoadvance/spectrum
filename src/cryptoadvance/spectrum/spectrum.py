@@ -1,26 +1,31 @@
+import json
+import logging
+import math
 import os
+import random
+import threading
 import time
+import traceback
 from functools import wraps
 
-from .elsock import ElectrumSocket
 from embit import bip32
 from embit.descriptor import Descriptor as EmbitDescriptor
+from embit.descriptor.checksum import add_checksum
+from embit.finalizer import finalize_psbt
+from embit.networks import NETWORKS
+from embit.psbt import PSBT, DerivationPath
 from embit.script import Script as EmbitScript
 from embit.script import Witness
-from embit.descriptor.checksum import add_checksum
-from embit.networks import NETWORKS
 from embit.transaction import Transaction as EmbitTransaction
 from embit.transaction import TransactionInput, TransactionOutput
-from embit.psbt import PSBT, DerivationPath
-from embit.finalizer import finalize_psbt
-from .util import get_blockhash, scripthash, sat_to_btc, btc_to_sat
-from .db import db, Wallet, Descriptor, Script, Tx, UTXO, TxCategory
 from sqlalchemy.sql import func
-import traceback
-import threading
-import json
-import random
-import math
+
+from .db import UTXO, Descriptor, Script, Tx, TxCategory, Wallet, db
+from .elsock import ElectrumSocket
+from .util import (FlaskThread, btc_to_sat, get_blockhash, handle_exception, sat_to_btc,
+                   scripthash)
+
+logger = logging.getLogger(__name__)
 
 # a set of registered rpc calls that do not need a wallet
 RPC_METHODS = set()
@@ -76,7 +81,7 @@ class Spectrum:
     roothash = ""  # hash of the 0'th block
     bestblockhash = ""  # hash of the current best block
 
-    def __init__(self, host="127.0.0.1", port=50001, datadir="data", app=None):
+    def __init__(self, host="127.0.0.1", port=50001, datadir="data", app=None, ssl=False):
         self.app = app
         self.host = host
         self.port = port
@@ -85,27 +90,28 @@ class Spectrum:
             os.makedirs(self.txdir)
         try:
             self.sock = ElectrumSocket(
-                host=host, port=port, callback=self.process_notification
+                host=host, port=port, callback=self.process_notification, use_ssl=ssl
             )
-        except:
+        except ConnectionRefusedError as e:
+            logger.error("Connection refused: Proceeding in offline-Mode")
             self.sock = None  # offline mode
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
-        self.sync()
 
     @property
     def txdir(self):
         return os.path.join(self.datadir, "txs")
 
-    def sync(self):
+    def _sync(self):
+        logger.info("Syncing ...")
         if not self.sock:
             return
-        # subscribe to block headers
+        logger.info("subscribe to block headers")
         res = self.sock.call("blockchain.headers.subscribe")
         self.blocks = res["height"]
         self.bestblockhash = get_blockhash(res["hex"])
-        # detect chain from header
+        logger.info("detect chain from header")
         rootheader = self.sock.call("blockchain.block.header", [0])
         self.roothash = get_blockhash(rootheader)
         self.chain = ROOT_HASHES.get(self.roothash, "regtest")
@@ -114,9 +120,19 @@ class Spectrum:
             # ignore external scripts (labeled recepients)
             if sc.index is None:
                 continue
+            logger.info(f"subscribe to scripthash {sc.scripthash}")
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
+    
+    def sync(self, asyncc=True):
+        if asyncc:
+            t = FlaskThread(
+                target=self._sync,
+            )
+            t.start()
+        else:
+            self._sync()
 
     def sync_script(self, script, state=None):
         # Normally every script has 1-2 transactions and 0-1 utxos,
@@ -238,7 +254,7 @@ class Spectrum:
         if method == "blockchain.scripthash.subscribe":
             scripthash = params[0]
             state = params[1]
-            print("SYNC", scripthash, "state", state)
+            logger.info("SYNC", scripthash, "state", state)
             with self.app.app_context():
                 scripts = Script.query.filter_by(scripthash=scripthash).all()
                 for sc in scripts:
@@ -563,6 +579,7 @@ class Spectrum:
                 self.importdescriptor(wallet, **request)
                 result = {"success": True}
             except Exception as e:
+                handle_exception(e)
                 result = {"success": False, "error": {"code": -500, "message": str(e)}}
             results.append(result)
         return results
@@ -1084,10 +1101,22 @@ class Spectrum:
             )
             db.session.add(sc)
         db.session.commit()
+        return d
 
+    def subcribe_scripts(self, descriptor, asyncc=True):
+        if asyncc:
+            t = FlaskThread(
+                target=self._subcribe_scripts,
+                args=[descriptor,]
+            )
+            t.start()
+        else:
+            self._subcribe_scripts(descriptor)
+
+    def _subcribe_scripts(self, descriptor) -> None:
         # subscribe to all scripts in a thread to speed up creation of the wallet
-        for sc in Script.query.filter_by(descriptor=d).all():
+        for sc in Script.query.filter_by(descriptor=descriptor).all():
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
-        return d
+
