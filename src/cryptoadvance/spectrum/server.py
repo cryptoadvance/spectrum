@@ -1,64 +1,59 @@
-from flask import Flask, request, g
-from .db import db, Script
-from .spectrum import Spectrum
-
 import json
+import logging
 import os
 
+from flask import Flask, g, request
 
-def create_app(config):
+from .db import Script, db
+from .spectrum import Spectrum
+from .server_endpoints.core_api import core_api
+from .server_endpoints.healthz import healthz
+
+logger = logging.getLogger(__name__)
+
+def create_app(config="cryptoadvance.spectrum.config.LocalElectrumConfig"):
+    if os.environ.get("CONFIG"):
+        config = os.environ.get("CONFIG")
     app = Flask(__name__)
+    app.config.from_object(config)
+    logger.info(f"config: {config}")
 
     # create folder if doesn't exist
-    if not os.path.exists(config["datadir"]):
-        os.makedirs(config["datadir"])
+    if not os.path.exists(app.config["DATADIR"]):
+        os.makedirs(app.config["DATADIR"])
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{config['database']}"
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # 32 bytes generated from us.random
-    # TODO: generate at start
-    app.config["SECRET_KEY"] = "feoj49j(*$I$NGO4f380jfkosf024m8ODFKv"
     db.init_app(app)
 
-    @app.route("/", methods=["GET", "POST"])
-    def index():
-        if request.method == "GET":
-            return "JSONRPC server handles only POST requests"
-        data = request.get_json()
-        if isinstance(data, dict):
-            return json.dumps(app.spectrum.jsonrpc(data))
-        if isinstance(data, list):
-            return json.dumps([app.spectrum.jsonrpc(item) for item in data])
+    app.logger.info("-------------------------CONFIGURATION-OVERVIEW------------")
+    app.logger.info("Config from "+os.environ.get("CONFIG","empty"))
+    for key, value in sorted(app.config.items()):
+        if key in ["DB_PASSWORD","SECRET_KEY","SQLALCHEMY_DATABASE_URI"]:
+            app.logger.info("{} = {}".format(key,"xxxxxxxxxxxx"))
+        else:
+            app.logger.info("{} = {}".format(key,value))
+    app.logger.info("-----------------------------------------------------------")
 
-    @app.route("/wallet/", methods=["GET", "POST"])
-    @app.route("/wallet/<path:wallet_name>", methods=["GET", "POST"])
-    def walletrpc(wallet_name=""):
-        if request.method == "GET":
-            return "JSONRPC server handles only POST requests"
-        data = request.get_json()
-        if isinstance(data, dict):
-            return json.dumps(app.spectrum.jsonrpc(data, wallet_name=wallet_name))
-        if isinstance(data, list):
-            return json.dumps(
-                [app.spectrum.jsonrpc(item, wallet_name=wallet_name) for item in data]
-            )
+    app.register_blueprint(core_api)
+    app.register_blueprint(healthz)
 
-    # create database if doesn't exist
-    if not os.path.exists(config["database"]):
-        with app.app_context():
-            db.create_all()
+    with app.app_context():
+        db.create_all()
 
     with app.app_context():
         # if not getattr(g, "electrum", None):
+        logger.info("Creating Spectrum Object ...")
         app.spectrum = Spectrum(
-            config["electrum"]["host"],
-            config["electrum"]["port"],
-            datadir=config["datadir"],
+            app.config["ELECTRUM_HOST"],
+            app.config["ELECTRUM_PORT"],
+            datadir=app.config["DATADIR"],
             app=app,
+            ssl=app.config["ELECTRUM_USES_SSL"]
         )
-
     return app
+
+def init_app(app):
+    with app.app_context():
+        app.spectrum.sync()
 
 
 def main():

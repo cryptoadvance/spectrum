@@ -1,4 +1,4 @@
-from .server import main
-
+from .cli import entry_point
+import logging 
 if __name__ == "__main__":
-    main()
+    entry_point()

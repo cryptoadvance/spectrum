@@ -1,4 +1,6 @@
+import logging
 import socket
+import ssl
 import json
 import random
 import time
@@ -7,14 +9,18 @@ import sys
 
 # TODO: normal handling of ctrl+C interrupt
 
+logger = logging.getLogger(__name__)
 
 class ElectrumSocket:
-    def __init__(self, host="127.0.0.1", port=50001, callback=None):
+    def __init__(self, host="127.0.0.1", port=50001, use_ssl=False, callback=None):
         self._host = host
         self._port = port
         self.running = True
         self._callback = callback
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if use_ssl:
+            logger.info(f"Using ssl while connectiong to {self._socket}")
+            self._socket = ssl.wrap_socket(self._socket)
         self._socket.connect((host, port))
         self._results = {}  # store results of the calls here
         self._requests = []
