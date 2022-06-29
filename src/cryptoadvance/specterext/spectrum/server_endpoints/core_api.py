@@ -1,4 +1,5 @@
 import json,logging
+from ..service import SpectrumService
 
 from flask import (
     Blueprint,
@@ -9,7 +10,7 @@ from flask import current_app as app
 
 logger = logging.getLogger(__name__)
 
-core_api = Blueprint("core_api", __name__)
+core_api = SpectrumService.blueprints["core_api"]
 
 
 @core_api.route("/", methods=["GET", "POST"])
