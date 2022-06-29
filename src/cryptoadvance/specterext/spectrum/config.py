@@ -33,13 +33,16 @@ class BaseConfig(object):
     DATABASE=os.path.abspath(os.path.join(DATADIR, "wallets.sqlite"))
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS=False
-    SECRET_KEY='development key'
+
     USERNAME='admin'
     HOST="127.0.0.1"
-    PORT=8081
+
 
     ELECTRUM_USES_SSL=False
 
+class BaseConfigStandalone():
+    PORT=8081
+    SECRET_KEY='development key'
 
 class PostgresBasedConfig(BaseConfig):
     """Development configuration with Postgres."""
@@ -61,6 +64,9 @@ class LiteConfig(BaseConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
     ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
+
+class DevelopmentConfig(LiteConfig):
+    pass
 
 class PostgresConfig(PostgresBasedConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')

@@ -271,6 +271,7 @@ class Spectrum:
         id = obj.get("id", 0)
         params = obj.get("params", [])
         print("RPC", method, wallet_name)
+        startTime = time.time()
         try:
             # get wallet by name
             wallet = self.get_wallet(wallet_name) if wallet_name is not None else None
@@ -299,6 +300,8 @@ class Spectrum:
             print("FAIL", method, wallet_name, e)
             print(traceback.format_exc())
             return dict(result=None, error={"code": -500, "message": str(e)}, id=id)
+        executionTime = (time.time() - startTime)
+        print("RPC {} {} {:.0g} ms".format(method,wallet_name, executionTime*1000))
         return dict(result=res, error=None, id=id)
 
     # ========= GENERIC RPC CALLS ========== #

@@ -7,6 +7,8 @@ import time
 import threading
 import sys
 
+from cryptoadvance.specterext.spectrum.util import handle_exception
+
 # TODO: normal handling of ctrl+C interrupt
 
 logger = logging.getLogger(__name__)
@@ -21,7 +23,18 @@ class ElectrumSocket:
         if use_ssl:
             logger.info(f"Using ssl while connectiong to {self._socket}")
             self._socket = ssl.wrap_socket(self._socket)
+        # first check
+        check = self._socket.connect_ex((host,port))
+        if check != 0:
+            raise Exception("Port for electrum is not open")
+        if self._socket._connected:
+            print("Connected!")
+            self._socket.close()
         self._socket.connect((host, port))
+        # except ValueError as ve:
+        #     if str(ve).startswith("attempt to connect already-connected SSLSocket!"):
+        #         self._socket.close()
+        #         self._socket.connect((host, port))
         self._results = {}  # store results of the calls here
         self._requests = []
         self._notifications = []
@@ -46,6 +59,7 @@ class ElectrumSocket:
                     req = self._requests.pop()
                     self._socket.sendall(json.dumps(req).encode() + b"\n")
                 except Exception as e:
+                    handle_exception(e)
                     print("Error in write", e)
             time.sleep(0.01)
 

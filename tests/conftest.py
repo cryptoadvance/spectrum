@@ -1,7 +1,7 @@
 from flask import Flask
 import pytest
-from cryptoadvance.spectrum.config import TestConfig
-from cryptoadvance.spectrum.server import create_app
+from cryptoadvance.specterext.spectrum.config import TestConfig
+from cryptoadvance.specterext.spectrum.server import create_app
 import sys
 
 def spectrum_app_with_config(config={}, specter=None):
