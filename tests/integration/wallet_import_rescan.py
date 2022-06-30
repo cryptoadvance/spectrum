@@ -26,7 +26,7 @@ from embit.bip32 import NETWORKS, HDKey
 from mock import patch
 from cryptoadvance.specter.key import Key
 import bitcoin_comp_layer
-from test_framework.descriptors import descsum_create
+from embit.descriptor.checksum import add_checksum
 
 
 logger = logging.getLogger(__name__)
@@ -74,13 +74,13 @@ def test_TrafficGen(
     result = w1.importdescriptors(
         [
             {
-                "desc": descsum_create("wpkh(" + tpriv + "/84'/1'/0'/0/*)"),
+                "desc": add_checksum("wpkh(" + tpriv + "/84'/1'/0'/0/*)"), 
                 "timestamp": "now",
                 "range": [0, 100],
                 "active": True,
             },
             {
-                "desc": descsum_create("wpkh(" + tpriv + "/84'/1'/1'/1/*)"),
+                "desc": add_checksum("wpkh(" + tpriv + "/84'/1'/1'/1/*)"),
                 "timestamp": "now",
                 "range": [0, 100],
                 "active": True,
@@ -90,7 +90,7 @@ def test_TrafficGen(
     )
 
     logger.info(f"result of importdescriptors: {result}")
-    zero_address = rpc.deriveaddresses(descsum_create("wpkh(" + tpriv + "/84'/1'/0'/0/*)"),[0,0])[0]
+    zero_address = rpc.deriveaddresses(add_checksum("wpkh(" + tpriv + "/84'/1'/0'/0/*)"),[0,0])[0]
     #zero_address = w1.getnewaddress()
     print(f"muh: {zero_address}")
     logger.info(f"result of addressinfo(w1)) {w1.getaddressinfo(zero_address)}")
