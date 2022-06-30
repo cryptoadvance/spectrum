@@ -25,7 +25,6 @@ from cryptoadvance.specter.wallet import Wallet
 from embit.bip32 import NETWORKS, HDKey
 from mock import patch
 from cryptoadvance.specter.key import Key
-import bitcoin_comp_layer
 from embit.descriptor.checksum import add_checksum
 
 
