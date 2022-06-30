@@ -1,0 +1,27 @@
+name: Nigiri pipeline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Install Nigiri
+        run: |
+          mkdir ~/.nigiri; cd ~/.nigiri
+          curl https://travis.nigiri.network | bash; cd
+          docker-compose -f ~/.nigiri/docker-compose.yml up -d
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt && pip install -r test_requirements.txt
+          pip install -e .
+      - name: Run integration tests
+        run: |
+          pytest tests/wallet_import_rescan.py
+        
