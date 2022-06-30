@@ -1,5 +1,5 @@
 black
 pytest
-pre-commit/home/kim/src/spectrum/.env/bin/python -m pip install --upgrade pip
+pre-commit
 mock
 cryptoadvance.specter==1.10.3
