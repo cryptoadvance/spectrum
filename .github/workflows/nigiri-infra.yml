@@ -17,10 +17,13 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: "3.x"
+      - name: Upgrade pip
+        run: |
+          python3 -m pip install --upgrade pip
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt && pip install -r test_requirements.txt
-          pip install -e .
+          pip3 install -r requirements.txt && pip3 install -r test_requirements.txt
+          pip3 install -e .
       - name: Run Nigiri
         uses: vulpemventures/nigiri-github-action@v1
         with:
