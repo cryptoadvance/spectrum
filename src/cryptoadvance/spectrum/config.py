@@ -72,8 +72,9 @@ class TestConfig(LiteConfig):
 
 class NigiriTestConfig(TestConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='localhost')
-    ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='24224'))
+    ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='30020'))
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false")
+
 class ProductionConfig(PostgresBasedConfig):
     SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(16))
 

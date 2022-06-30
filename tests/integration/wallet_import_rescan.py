@@ -11,6 +11,7 @@ At the end the txlist should be very similiar with the TXs of w1.
 
 """
 
+from distutils import core
 import logging
 import shutil
 import sys
@@ -30,16 +31,87 @@ from embit.descriptor.checksum import add_checksum
 
 logger = logging.getLogger(__name__)
 
-def test_TrafficGen(
+number_of_txs = 10
+keypoolrefill = number_of_txs
+
+
+def test_import_nigiri_core(
     caplog,
     empty_data_folder,
     acc0xprv_hold_accident,
     acc0key_hold_accident,
     rootkey_hold_accident,
-):
+    ):
+    ''' Test is using a rpc connecting to nigiri's core
+    '''
     caplog.set_level(logging.INFO)
-    number_of_txs = 10
-    keypoolrefill = number_of_txs
+    rpc: BitcoinRPC = BitcoinRPC(user="admin1", password="123", host="localhost", port="18443")
+    runtest_import_via(rpc,
+        rpc,
+        number_of_txs,
+        keypoolrefill,
+        caplog,
+        empty_data_folder,
+        acc0key_hold_accident,
+        rootkey_hold_accident
+    )
+
+def test_import_sregtest_core(
+    caplog,
+    bitcoin_regtest,
+    empty_data_folder,
+    acc0xprv_hold_accident,
+    acc0key_hold_accident,
+    rootkey_hold_accident,
+    ):
+    ''' Test is using a rpc connecting the core created by the bitcoin_regtest fixture
+    '''
+    caplog.set_level(logging.INFO)
+    rpc: BitcoinRPC = bitcoin_regtest.get_rpc()
+    runtest_import_via(rpc,
+        rpc,
+        number_of_txs,
+        keypoolrefill,
+        caplog,
+        empty_data_folder,
+        acc0key_hold_accident,
+        rootkey_hold_accident
+    )
+
+def test_import_spectrum_nigiri_electrs_core( 
+    caplog,
+    app_nigiri,
+    empty_data_folder,
+    acc0xprv_hold_accident,
+    acc0key_hold_accident,
+    rootkey_hold_accident,
+    ):
+    ''' Test is using a rpc connecting to spectrum which is connected via nigiri's electrs to nigiri's core
+    '''
+    caplog.set_level(logging.INFO)
+    spectrum_rpc: BitcoinRPC = BitcoinRPC(user="", password="", host="localhost", port="8081")
+    btc_rpc: BitcoinRPC = BitcoinRPC(user="admin1", password="123", host="localhost", port="18443")
+    runtest_import_via(spectrum_rpc, 
+        btc_rpc,
+        number_of_txs,
+        keypoolrefill,
+        caplog,
+        empty_data_folder,
+        acc0key_hold_accident,
+        rootkey_hold_accident
+    )
+
+
+def runtest_import_via(spectrum_rpc,
+    btc_rpc,
+    number_of_txs,
+    keypoolrefill,
+    caplog,
+    empty_data_folder,
+    acc0key_hold_accident,
+    rootkey_hold_accident,
+    ):
+    
     # caplog.set_level(logging.DEBUG)
     # durations = {}
     # for i in range(1,2,1):
@@ -54,18 +126,24 @@ def test_TrafficGen(
     #     tg.empty_data_folder = empty_data_folder
     #     durations[i] = tg.main()
 
-    logger.info(f"Setup wallets, planning for {number_of_txs} TXs")
+    logger.info(f"Setup wallets, planning for {number_of_txs}")
+    logger.info(f"btc_rpc = {btc_rpc}")
+    logger.info(f"spectrum_rpc = {spectrum_rpc}")
     # w0 is a wallet with coinbase rewards
-    rpc: BitcoinRPC = BitcoinRPC(user="admin1", password="123", host="localhost", port="18443")
-    if "" not in rpc.listwallets():
-        rpc.createwallet("")
-    w0 = rpc.wallet("")
-    rpc.generatetoaddress(110, w0.getnewaddress())
+    
+    w0_walletname = "w0"+ str(int(time.time()))
+    w1_walletname = "w1"+ str(int(time.time()))
+    if w0_walletname not in btc_rpc.listwallets():
+        btc_rpc.createwallet(w0_walletname)
+    w0 = btc_rpc.wallet(w0_walletname)
+    logger.info(f"result of getbalances (w0 / mine / trusted ): {w0.getbalances()['mine']['trusted']}")
+    btc_rpc.generatetoaddress(110, w0.getnewaddress())
+    logger.info(f"result of getbalances (w0 / mine / trusted ): {w0.getbalances()['mine']['trusted']}")
 
     # w1 contains the private keys acc0xprv_hold_accident
-    if "w1" not in rpc.listwallets():
-        rpc.createwallet("w1", blank=True, descriptors=True)
-    w1 = rpc.wallet("w1")
+    if w1_walletname not in btc_rpc.listwallets():
+        btc_rpc.createwallet(w1_walletname, blank=True, descriptors=True)
+    w1 = btc_rpc.wallet(w1_walletname)
     tpriv = rootkey_hold_accident.to_base58(
         version=NETWORKS["regtest"]["xprv"]
     )
@@ -89,30 +167,30 @@ def test_TrafficGen(
     )
 
     logger.info(f"result of importdescriptors: {result}")
-    zero_address = rpc.deriveaddresses(add_checksum("wpkh(" + tpriv + "/84'/1'/0'/0/*)"),[0,0])[0]
+    zero_address = btc_rpc.deriveaddresses(add_checksum("wpkh(" + tpriv + "/84'/1'/0'/0/*)"),[0,0])[0]
     #zero_address = w1.getnewaddress()
     print(f"muh: {zero_address}")
     logger.info(f"result of addressinfo(w1)) {w1.getaddressinfo(zero_address)}")
     w1.keypoolrefill(199)
 
     # Create some TXs towards w1
-    logger.info(f"blockheight: {rpc.getblockchaininfo()['blocks']} ")
+    logger.info(f"blockheight: {btc_rpc.getblockchaininfo()['blocks']} ")
     logger.info(f"result of getbalances (before): {w1.getbalances()}")
     for i in range(0, number_of_txs):
-        w0.sendtoaddress(w1.getnewaddress(), 0.1)
+        w0.sendtoaddress(w1.getnewaddress(), round(0.001+random()/100,8))
         if i % 10 and random() > 0.8:
-            rpc.generatetoaddress(1, w0.getnewaddress())
+            btc_rpc.generatetoaddress(1, w0.getnewaddress())
 
     # be sure that all the TXs are in the chain
-    rpc.generatetoaddress(1, w0.getnewaddress())
-    logger.info(f"blockheight: {rpc.getblockchaininfo()['blocks']} ")
+    btc_rpc.generatetoaddress(1, w0.getnewaddress())
+    logger.info(f"blockheight: {btc_rpc.getblockchaininfo()['blocks']} ")
     logger.info(f"result of getbalances (after): {w1.getbalances()}")
 
     # Create the specter-wallet
     wm = WalletManager(
         None,
         empty_data_folder,
-        rpc,
+        spectrum_rpc,
         "regtest",
         None,
         allow_threading=False,
@@ -120,14 +198,16 @@ def test_TrafficGen(
     wallet: Wallet = wm.create_wallet(
         "hold_accident", 1, "wpkh", [acc0key_hold_accident], MagicMock()
     )
-    hold_accident = rpc.wallet("specter/hold_accident")
+    hold_accident = spectrum_rpc.wallet("specter/hold_accident")
     ha_zero_address = wallet.get_address(0) # the defaultwallet is already used
-    logger.info(f"result of addressinfo(hold_accident)) {hold_accident.getaddressinfo(ha_zero_address)}")
+    #logger.info(f"result of addressinfo(hold_accident)) {hold_accident.getaddressinfo(ha_zero_address)}")
 
     # Be sure that the addresses of w1 and the specter-wallet matches
     assert ha_zero_address == zero_address
 
-    hold_accident.keypoolrefill(number_of_txs + 10)
+    if spectrum_rpc == btc_rpc:
+        # There is no keypoolrefill in spectrum
+        hold_accident.keypoolrefill(number_of_txs + 10)
     wallet.update()
 
     # Do a rescan

@@ -3,6 +3,7 @@ import logging
 import math
 import os
 import random
+from socket import socket
 import threading
 import time
 import traceback
@@ -93,8 +94,11 @@ class Spectrum:
                 host=host, port=port, callback=self.process_notification, use_ssl=ssl
             )
         except ConnectionRefusedError as e:
-            logger.error("Connection refused: Proceeding in offline-Mode")
+            logger.error(f"Connection refused (host={self.host}, port={self.port}, use_ssl={ssl}): Proceeding in offline-Mode")
             self.sock = None  # offline mode
+        except OSError:
+            logger.error(f"Connection timeout (host={self.host}, port={self.port}, use_ssl={ssl}): Proceeding in offline-Mode")
+            self.sock = None
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
@@ -106,6 +110,7 @@ class Spectrum:
     def _sync(self):
         logger.info("Syncing ...")
         if not self.sock:
+            logger.info("Not Syncing in offline-mode ...")
             return
         logger.info("subscribe to block headers")
         res = self.sock.call("blockchain.headers.subscribe")

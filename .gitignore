@@ -1,6 +1,8 @@
 data
 config.toml
 
+tests/bitcoin*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

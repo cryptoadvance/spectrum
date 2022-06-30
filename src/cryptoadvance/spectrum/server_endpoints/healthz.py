@@ -19,7 +19,9 @@ def liveness():
 def readyness():
     try:
         # Probably improvable:
+        logger.info("ready?")
         assert app.spectrum.sock is not None
     except Exception as e:
+        logger.info("no!")
         return {"message": "i am not ready"}, 500
     return {"message": "i am ready"}

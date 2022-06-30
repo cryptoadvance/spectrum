@@ -21,6 +21,7 @@ class ElectrumSocket:
         if use_ssl:
             logger.info(f"Using ssl while connectiong to {self._socket}")
             self._socket = ssl.wrap_socket(self._socket)
+        self._socket.settimeout(5)
         self._socket.connect((host, port))
         self._results = {}  # store results of the calls here
         self._requests = []

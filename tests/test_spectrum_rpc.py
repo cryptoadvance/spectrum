@@ -18,3 +18,10 @@ def test_getmininginfo(caplog,client):
     result = client.post("/", json={"method":"getmininginfo"})
     assert result.status_code == 200
     assert json.loads(result.data)["result"]["blocks"] == 0
+
+def test_getblockchaininfo(caplog,client):
+    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG, logger="cryptoadvance.spectrum")
+    result = client.post("/", json={"method":"getblockchaininfo"})
+    assert result.status_code == 200
+    assert json.loads(result.data)["result"]["blocks"] == 0
