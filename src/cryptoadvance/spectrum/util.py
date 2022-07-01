@@ -39,6 +39,7 @@ class FlaskThread(Thread):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app = app._get_current_object()
+        self.daemon = True
 
     def run(self):
         logger.debug("New thread started"+str(self._target))

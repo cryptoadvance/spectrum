@@ -11,9 +11,15 @@ from .cli_server import server
 @click.group()
 @click.option("--debug", is_flag=True, help="Show debug information on errors.")
 def entry_point(debug):
-    # central and early configuring of logging see
-    # https://flask.palletsprojects.com/en/1.1.x/logging/#basic-configuration
-    # However the dictConfig doesn't work, so let's do something similiar programatically
+    setup_logging(debug)
+
+entry_point.add_command(server)
+
+def setup_logging(debug=False):
+    ''' central and early configuring of logging see
+        https://flask.palletsprojects.com/en/1.1.x/logging/#basic-configuration
+        However the dictConfig doesn't work, so let's do something similiar programatically
+    '''
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     logger = logging.getLogger('cryptoadvance')
@@ -43,5 +49,3 @@ def entry_point(debug):
 
     logging.getLogger().handlers = []
     logging.getLogger().addHandler(ch)
-
-entry_point.add_command(server)

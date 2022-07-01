@@ -132,6 +132,9 @@ class Spectrum:
     
     def sync(self, asyncc=True):
         if asyncc:
+            # Using a FlaskThread means also by default that it's a daemon-thread. This has the advantage that
+            # The thread is killed when the main-thread is killed but it does not do it in a tidy way.
+            # Potentially harmfull for a LiteConfig but hopefully no problem for a PostgresConfig
             t = FlaskThread(
                 target=self._sync,
             )

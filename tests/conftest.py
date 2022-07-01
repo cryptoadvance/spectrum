@@ -1,5 +1,6 @@
 import code
 import json
+import logging
 import shutil
 import signal
 import sys
@@ -10,12 +11,15 @@ import traceback
 import pytest
 from fix_infrastructure import MockServer
 from cryptoadvance.spectrum.config import TestConfig
+from cryptoadvance.spectrum.cli import setup_logging
 from cryptoadvance.spectrum.server import create_app, init_app
 from cryptoadvance.specter.key import Key
 from embit import script
 from embit.bip32 import NETWORKS, HDKey
 from embit.bip39 import mnemonic_to_seed
 from flask import Flask
+
+logger = logging.getLogger(__name__)
 
 pytest_plugins = [
     "fix_infrastructure"
@@ -71,7 +75,9 @@ def pytest_addoption(parser):
 
 def spectrum_app_with_config(config={}):
     """helper-function to create SpectrumFlasks"""
-    shutil.rmtree("./data")
+    setup_logging(debug=True)
+    logger.info("Deleting ./data")
+    shutil.rmtree("./data", ignore_errors=True)
     if isinstance(config, dict):
         tempClass = type("tempClass", (TestConfig,), {})
         for key, value in config.items():
@@ -94,7 +100,7 @@ def spectrum_app_with_config(config={}):
 @pytest.fixture
 def app() -> Flask:
     """the Flask-App, but uninitialized"""
-    return spectrum_app_with_config(config="cryptoadvance.spectrum.config.NigiriTestConfig")
+    return spectrum_app_with_config(config="cryptoadvance.spectrum.config.TestConfig")
 
 @pytest.fixture
 def app_offline() -> Flask:
