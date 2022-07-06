@@ -98,6 +98,10 @@ def spectrum_app_with_config(config={}):
         return app
 
 @pytest.fixture
+def config():
+    return TestConfig
+
+@pytest.fixture
 def app() -> Flask:
     """the Flask-App, but uninitialized"""
     return spectrum_app_with_config(config="cryptoadvance.spectrum.config.TestConfig")

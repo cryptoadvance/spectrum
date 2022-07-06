@@ -54,7 +54,9 @@ def bitcoin_regtest(request):
         bitcoind_regtest.stop_bitcoind()
 
 class MockServer(Thread):
-    ''' copied from https://gist.github.com/eruvanos/f6f62edb368a20aaa880e12976620db8
+    ''' A Flask-Server which you can spinup in tests. It's running in a thread
+    
+        copied from https://gist.github.com/eruvanos/f6f62edb368a20aaa880e12976620db8
     '''
     def __init__(self, app, port=8081):
         super().__init__()

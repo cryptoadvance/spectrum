@@ -58,7 +58,7 @@ class PostgresConfig(BaseConfig):
 # Convention: Prefix a level 1 config with the electrum solution
 class NigiriLocalElectrumLiteConfig(LiteConfig):
     ELECTRUM_HOST="127.0.0.1"
-    ELECTRUM_PORT=3000
+    ELECTRUM_PORT=50000
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false")
 
 class EmzyElectrumLiteConfig(BaseConfig):

@@ -99,13 +99,18 @@ class ElectrumSocket:
         uid = random.randint(0, 1 << 32)
         obj = {"jsonrpc": "2.0", "method": method, "params": params, "id": uid}
         self._requests.append(obj)
+        start = time.time()
         while uid not in self._results:  # wait for response
+            #time.sleep(1)
             time.sleep(0.01)
+            if time.time() - start > 10:
+                raise Exception(f"Timeout waiting for {method}")
         res = self._results.pop(uid)
         if "error" in res:
             raise ValueError(res["error"])
         if "result" in res:
             return res["result"]
+        
 
     def wait(self):
         self._waiting = True
@@ -113,7 +118,10 @@ class ElectrumSocket:
             time.sleep(0.01)
 
     def ping(self):
-        return self.call("server.ping")
+        start = time.time()
+        self.call("server.ping") # result None
+        return time.time() - start
+
 
     def __del__(self):
         self._socket.close()

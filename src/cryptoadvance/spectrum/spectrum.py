@@ -88,8 +88,10 @@ class Spectrum:
         self.port = port
         self.datadir = datadir
         if not os.path.exists(self.txdir):
+            logger.info(f"Creating txdir {self.txdir} ")
             os.makedirs(self.txdir)
         try:
+            logger.info(f"Creating ElectrumSocket {host}:{port}")
             self.sock = ElectrumSocket(
                 host=host, port=port, callback=self.process_notification, use_ssl=ssl
             )
@@ -102,24 +104,30 @@ class Spectrum:
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
+        if self.sock:
+           
+            logger.info("subscribe to block headers")
+            res = self.sock.call("blockchain.headers.subscribe")
+            self.blocks = res["height"]
+            self.bestblockhash = get_blockhash(res["hex"])
+            logger.info("detect chain from header")
+            rootheader = self.sock.call("blockchain.block.header", [0])
+            logger.info(f"Set roothash {self.roothash}")
+            self.roothash = get_blockhash(rootheader)
+            self.chain = ROOT_HASHES.get(self.roothash, "regtest")
+
 
     @property
     def txdir(self):
         return os.path.join(self.datadir, "txs")
 
     def _sync(self):
-        logger.info("Syncing ...")
+        logger.info(f"Syncing ... {self.sock}")
         if not self.sock:
             logger.info("Not Syncing in offline-mode ...")
             return
-        logger.info("subscribe to block headers")
-        res = self.sock.call("blockchain.headers.subscribe")
-        self.blocks = res["height"]
-        self.bestblockhash = get_blockhash(res["hex"])
-        logger.info("detect chain from header")
-        rootheader = self.sock.call("blockchain.block.header", [0])
-        self.roothash = get_blockhash(rootheader)
-        self.chain = ROOT_HASHES.get(self.roothash, "regtest")
+        else:
+            logger.info(f"Syncing ... {self.sock}")
         # subscribe to all scripts
         for sc in Script.query.all():
             # ignore external scripts (labeled recepients)
@@ -411,6 +419,7 @@ class Spectrum:
             return self.bestblockhash
         if height < 0 or height > self.blocks:
             raise RPCError("Block height out of range", -8)
+        logger.info(f"height: {height}")
         header = self.sock.call("blockchain.block.header", [height])
         return get_blockhash(header)
 
