@@ -325,10 +325,10 @@ class Spectrum:
             else:
                 res = m(*args, **kwargs)
         except RPCError as e:
-            logger.error("FAIL", method, wallet_name, e)
+            logger.error(f"FAIL method {method} wallet {wallet_name} exc {e}")
             return dict(result=None, error=e.to_dict(), id=id)
         except Exception as e:
-            logger.error("FAIL", method, wallet_name, e)
+            logger.error(f"FAIL method {method} wallet {wallet_name} exc {e}")
             print(traceback.format_exc())
             return dict(result=None, error={"code": -500, "message": str(e)}, id=id)
         return dict(result=res, error=None, id=id)
