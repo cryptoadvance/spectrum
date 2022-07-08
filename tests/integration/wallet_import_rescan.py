@@ -29,11 +29,20 @@ from cryptoadvance.specter.key import Key
 from embit.descriptor.checksum import add_checksum
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("cryptoadvance")
 
 number_of_txs = 10
 keypoolrefill = number_of_txs
 
+def test_logging(caplog,
+    empty_data_folder,
+    acc0xprv_hold_accident,
+    acc0key_hold_accident,
+    rootkey_hold_accident,
+    ):
+    caplog.set_level(logging.INFO)
+    logger.info("MUUUH")
+    assert False
 
 def test_import_nigiri_core(
     caplog,
@@ -217,7 +226,7 @@ def runtest_import_via(spectrum_rpc,
     result = wallet.rpc.rescanblockchain(0)
     print(wallet.rpc.getwalletinfo())
     logger.info(f"Result of rescanblockchain: {result}")
-
+    time.sleep(15)
     # both balances are the same
     assert (
         wallet.rpc.getbalances()["mine"]["trusted"]

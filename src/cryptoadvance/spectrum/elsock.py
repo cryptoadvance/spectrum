@@ -6,6 +6,7 @@ import random
 import time
 import threading
 import sys
+from .util import handle_exception
 
 # TODO: normal handling of ctrl+C interrupt
 
@@ -47,7 +48,8 @@ class ElectrumSocket:
                     req = self._requests.pop()
                     self._socket.sendall(json.dumps(req).encode() + b"\n")
                 except Exception as e:
-                    print("Error in write", e)
+                    logger.error("Error in write", e)
+                    handle_exception(e)
             time.sleep(0.01)
 
     def ping_loop(self):
@@ -56,14 +58,16 @@ class ElectrumSocket:
             try:
                 self.ping()
             except Exception as e:
-                print("Error in ping", e)
+                logger.error("Error in ping", e)
+                handle_exception(e)
 
     def recv_loop(self):
         while self.running:
             try:
                 self.recv()
             except Exception as e:
-                print("Error receiving data:", e)
+                logger.error(f"Error receiving data: {e}")
+                handle_exception(e)
             time.sleep(0.1)
 
     def recv(self):
@@ -91,9 +95,10 @@ class ElectrumSocket:
             try:
                 self._callback(data)
             except Exception as e:
-                print("Error in callback:", e)
+                logger.error("Error in callback:", e)
+                handle_exception(e)
         else:
-            print("Notification:", data)
+            logger.info("Notification:", data)
 
     def call(self, method, params=[]):
         uid = random.randint(0, 1 << 32)

@@ -4,20 +4,23 @@ import logging
 import shutil
 import signal
 import sys
-from binascii import hexlify
 import tempfile
 import traceback
+from binascii import hexlify
 
 import pytest
-from fix_infrastructure import MockServer
-from cryptoadvance.spectrum.config import TestConfig
-from cryptoadvance.spectrum.cli import setup_logging
-from cryptoadvance.spectrum.server import create_app, init_app
 from cryptoadvance.specter.key import Key
+from cryptoadvance.spectrum.cli import setup_logging
+from cryptoadvance.spectrum.config import TestConfig
+from cryptoadvance.spectrum.server import create_app, init_app
 from embit import script
 from embit.bip32 import NETWORKS, HDKey
 from embit.bip39 import mnemonic_to_seed
 from flask import Flask
+from werkzeug.utils import import_string
+from werkzeug.utils import ImportStringError
+
+from fix_infrastructure import MockServer
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +74,12 @@ def pytest_addoption(parser):
         default="master",
         help="Version of elementsd (something which works with git checkout ...)",
     )
+    parser.addoption(
+        "--config",
+        action="store",
+        default="cryptoadvance.spectrum.config.TestConfig",
+        help="The config-class to use, usually cryptoadvance.spectrum.config.Testconfig ",
+    )
     listen()
 
 def spectrum_app_with_config(config={}):
@@ -98,8 +107,18 @@ def spectrum_app_with_config(config={}):
         return app
 
 @pytest.fixture
-def config():
-    return TestConfig
+def config(request):
+    # Creates a class out of a fully qualified Class as string 
+    try:
+        mytype = import_string(request.config.getoption("config"))
+    except ImportStringError as e:
+        raise Exception("""
+            Module not found. Try:
+            --config cryptoadvance.spectrum.config.TestConfig (default) or
+            --config cryptoadvance.spectrum.config.EmzyElectrumLiteConfig
+        """)
+        raise e
+    return mytype
 
 @pytest.fixture
 def app() -> Flask:
@@ -114,7 +133,7 @@ def app_offline() -> Flask:
 @pytest.fixture
 def app_nigiri() -> Flask:
     """the Flask-App, but uninitialized"""
-    server = MockServer(spectrum_app_with_config(config="cryptoadvance.spectrum.config.NigiriTestConfig"))
+    server = MockServer(spectrum_app_with_config(config="cryptoadvance.spectrum.config.TestConfig"))
     server.start()
     yield server
     server.shutdown_server()

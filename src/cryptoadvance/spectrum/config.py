@@ -61,7 +61,7 @@ class NigiriLocalElectrumLiteConfig(LiteConfig):
     ELECTRUM_PORT=50000
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false")
 
-class EmzyElectrumLiteConfig(BaseConfig):
+class EmzyElectrumLiteConfig(LiteConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
     ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")

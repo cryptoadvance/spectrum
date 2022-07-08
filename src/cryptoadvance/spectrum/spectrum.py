@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import os
+from pydoc import describe
 import random
 from socket import socket
 import threading
@@ -23,7 +24,7 @@ from sqlalchemy.sql import func
 
 from .db import UTXO, Descriptor, Script, Tx, TxCategory, Wallet, db
 from .elsock import ElectrumSocket
-from .util import (FlaskThread, btc_to_sat, get_blockhash, handle_exception, sat_to_btc,
+from .util import (FlaskThread, btc_to_sat, get_blockhash, handle_exception, parse_blockheader, sat_to_btc,
                    scripthash)
 
 logger = logging.getLogger(__name__)
@@ -154,7 +155,7 @@ class Spectrum:
         # Normally every script has 1-2 transactions and 0-1 utxos,
         # so even if we delete everything and resync it's ok
         # except donation addresses that may have many txs...
-        print("SCRIPT IS NOT SYNCED", script.state, "!=", state)
+        logger.info(f"Script {script.scripthash[:7]} is not synced {script.state} != {state}")
         script_pubkey = script.script_pubkey
         internal = script.descriptor.internal
         # get all transactions, utxos and update balances
@@ -174,25 +175,40 @@ class Spectrum:
             if txid not in all_txids:
                 db.session.delete(tx)
         for tx in txs:
+            blockheader = self.sock.call( "blockchain.block.header", [tx.get("height")])
+            blockheader = parse_blockheader(blockheader)
             # update existing - set height
-            if tx["tx_hash"] in db_txs:
-                tx_details = self.sock.call(
-                    "blockchain.transaction.get", [tx["tx_hash"], True]
+            tx_in_db = tx["tx_hash"] in db_txs
+            try:
+                tx_magic = self.sock.call(
+                    "blockchain.transaction.get", [tx["tx_hash"], tx_in_db] 
                 )
+            except ValueError as e:
+                if str(e).startswith("verbose transactions are currently unsupported"): # electrs doesn't support it
+                    tx_magic = self.sock.call(
+                        "blockchain.transaction.get", [tx["tx_hash"], False] 
+                    )
+                else:
+                    raise e
+            if tx_in_db:
                 db_txs[tx["tx_hash"]].height = tx.get("height")
-                db_txs[tx["tx_hash"]].blockhash = tx_details.get("blockhash")
-                db_txs[tx["tx_hash"]].blocktime = tx_details.get("blocktime")
+                db_txs[tx["tx_hash"]].blockhash = blockheader.get("blockhash") # not existing, how can we fix that?
+                db_txs[tx["tx_hash"]].blocktime = blockheader.get("blocktime") # not existing, how can we fix that?
             # new tx
             else:
-                tx_details = self.sock.call(
-                    "blockchain.transaction.get", [tx["tx_hash"], True]
-                )
+
+                tx_details = {
+                    "tx_hash": tx_magic,
+                    "blockhash": blockheader.get("blockhash"),
+                    "blocktime" : blockheader.get("blocktime")
+                }
                 # dump to file
                 fname = os.path.join(self.txdir, "%s.raw" % tx["tx_hash"])
                 if not os.path.exists(fname):
                     with open(fname, "w") as f:
-                        f.write(tx_details["hex"])
-                parsedTx = EmbitTransaction.from_string(tx_details["hex"])
+                            f.write(tx_magic)
+
+                parsedTx = EmbitTransaction.from_string(tx_magic)
                 replaceable = all([inp.sequence < 0xFFFFFFFE for inp in parsedTx.vin])
 
                 category = TxCategory.RECEIVE
@@ -261,7 +277,7 @@ class Spectrum:
         return NETWORKS.get(self.chain, NETWORKS["main"])
 
     def process_notification(self, data):
-        print("Electrum data", data)
+        logger.info(f"process Notification: Electrum data {data}")
         method = data["method"]
         params = data["params"]
         if method == "blockchain.headers.subscribe":
@@ -270,7 +286,7 @@ class Spectrum:
         if method == "blockchain.scripthash.subscribe":
             scripthash = params[0]
             state = params[1]
-            logger.info("SYNC", scripthash, "state", state)
+            logger.info(f"electrum notification sh {scripthash} , state {state}")
             with self.app.app_context():
                 scripts = Script.query.filter_by(scripthash=scripthash).all()
                 for sc in scripts:
@@ -286,7 +302,7 @@ class Spectrum:
         method = obj.get("method")
         id = obj.get("id", 0)
         params = obj.get("params", [])
-        print("RPC", method, wallet_name)
+        logger.info(f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}")
         try:
             # get wallet by name
             wallet = self.get_wallet(wallet_name) if wallet_name is not None else None
@@ -309,10 +325,10 @@ class Spectrum:
             else:
                 res = m(*args, **kwargs)
         except RPCError as e:
-            print("FAIL", method, wallet_name, e)
+            logger.error("FAIL", method, wallet_name, e)
             return dict(result=None, error=e.to_dict(), id=id)
         except Exception as e:
-            print("FAIL", method, wallet_name, e)
+            logger.error("FAIL", method, wallet_name, e)
             print(traceback.format_exc())
             return dict(result=None, error={"code": -500, "message": str(e)}, id=id)
         return dict(result=res, error=None, id=id)
@@ -488,10 +504,7 @@ class Spectrum:
     def finalizepsbt(self, psbt, extract=True):
         psbt = PSBT.from_string(psbt)
         tx = None
-        try:
-            tx = finalize_psbt(psbt)
-        except Exception as e:
-            print(e)
+        tx = finalize_psbt(psbt)
         if tx:
             if extract:
                 return {"hex": str(tx), "complete": True}
@@ -534,6 +547,9 @@ class Spectrum:
         load_on_startup=True,
         external_signer=False,
     ):
+        ''' Creates a wallet
+            By default, it'll get a hotwallet
+        '''
         w = Wallet.query.filter_by(name=wallet_name).first()
         if w:
             raise RPCError("Wallet already exists", -4)
@@ -587,6 +603,13 @@ class Spectrum:
             "descriptors": True,
             "external_signer": False,
         }
+
+
+    @walletrpc
+    def rescanblockchain(self, wallet: Wallet, up_from_height):
+        """Dummy call, doing nothing"""
+        logger.info("NOP: rescanblockchain")
+        return {}
 
     @walletrpc
     def importdescriptors(self, wallet, requests):
@@ -1074,7 +1097,7 @@ class Spectrum:
 
     def importdescriptor(
         self,
-        wallet,
+        wallet: Wallet,
         desc: str,
         internal=False,
         active=False,
@@ -1083,20 +1106,21 @@ class Spectrum:
         next_index=0,
         **kwargs,
     ):
+        logger.info(f"Importing descriptor {desc}")
         addr_range = kwargs.get("range", 300)  # because range is special keyword
         descriptor = EmbitDescriptor.from_string(desc)
         has_private_keys = any([k.is_private for k in descriptor.keys])
         private_descriptor = None
         if has_private_keys:
             private_descriptor = desc
-            desc = str(descriptor.to_public())
+            desc = str(descriptor)
         if active:
             # deactivate other active descriptor
             for old_desc in wallet.descriptors:
                 if old_desc.internal == internal and old_desc.active:
                     old_desc.active = False
         d = Descriptor(
-            wallet=wallet,
+            wallet_id=wallet.id,
             active=active,
             internal=internal,
             descriptor=desc,
@@ -1107,8 +1131,11 @@ class Spectrum:
         db.session.commit()
         # TODO: move to keypoolrefill or something
         # Add scripts
+        logger.info(f"Creating {next_index + addr_range} scriptpubkeys for wallet {wallet}")
         for i in range(0, next_index + addr_range):
             scriptpubkey = descriptor.derive(i).script_pubkey()
+            address = scriptpubkey.address()
+            #logger.info(f"   {address}")
             sc = Script(
                 wallet=wallet,
                 descriptor=d,
@@ -1118,22 +1145,33 @@ class Spectrum:
             )
             db.session.add(sc)
         db.session.commit()
+        self.subcribe_scripts(d)
         return d
 
     def subcribe_scripts(self, descriptor, asyncc=True):
+        ''' Takes a descriptor and syncs all the scripts into the DB
+            creates a new thread doing that.
+        '''
         if asyncc:
             t = FlaskThread(
                 target=self._subcribe_scripts,
-                args=[descriptor,]
+                args=[descriptor.id,]
             )
             t.start()
         else:
-            self._subcribe_scripts(descriptor)
+            self._subcribe_scripts(descriptor.id)
 
-    def _subcribe_scripts(self, descriptor) -> None:
+    def _subcribe_scripts(self, descriptor_id: Descriptor) -> None:
+
+        descriptor: Descriptor = Descriptor.query.filter(Descriptor.id == descriptor_id).first()
         # subscribe to all scripts in a thread to speed up creation of the wallet
-        for sc in Script.query.filter_by(descriptor=descriptor).all():
+        sc: Script
+        relevant_scripts = Script.query.filter_by(descriptor=descriptor).all()
+        count_syned_scripts = 0
+        for sc in relevant_scripts:
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
+                count_syned_scripts = count_syned_scripts + 1
                 self.sync_script(sc, res)
+        logger.info(f"subscribed to {len(relevant_scripts)} scripts for descriptor {descriptor.descriptor[:30]}... where {count_syned_scripts} got synced")
 

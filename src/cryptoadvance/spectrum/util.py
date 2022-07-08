@@ -1,8 +1,10 @@
+from binascii import hexlify, unhexlify
+import hashlib
+import io
 import logging
 from threading import Thread
 
 from embit import hashes
-from embit.script import address_to_scriptpubkey
 from flask import current_app as app
 
 logger = logging.getLogger(__name__)
@@ -42,7 +44,36 @@ class FlaskThread(Thread):
         self.daemon = True
 
     def run(self):
-        logger.debug("New thread started"+str(self._target))
-        logger.debug(self.app)
+        logger.debug(f"New thread started {self._target.__name__}")
         with self.app.app_context():
             super().run()
+
+
+# inspired by Jimmy:
+# https://github.com/jimmysong/programmingbitcoin/blob/3fba6b992ece443e4256df057595cfbe91edda75/code-ch09/answers.py#L109-L123
+
+def little_endian_to_int(b):
+    '''little_endian_to_int takes byte sequence as a little-endian number.
+    Returns an integer'''
+    return int.from_bytes(b, 'little')  
+
+def parse_blockheader( s):
+    ''' pass in a string, 80 bytes or '''
+    if isinstance(s,str):
+        s = unhexlify(s)
+    if isinstance(s, bytes):
+        assert len(s) == 80, f"a Blockheader is exactly 80 bytes but this has {len(s)}"
+        mybytes = s
+        blockhash_bytes = hashlib.sha256(hashlib.sha256(mybytes).digest()).digest()[::-1]
+        blockhash_str = hexlify(blockhash_bytes).decode()
+        s = io.BytesIO(s)
+    version = little_endian_to_int(s.read(4))
+    prev_block = s.read(32)[::-1]
+    merkle_root = s.read(32)[::-1]
+    timestamp = little_endian_to_int(s.read(4))
+    bits = s.read(4)
+    nonce = s.read(4)
+    return { "version":version, "prev_block": prev_block, "merkle_root": merkle_root, 
+        "blocktime":timestamp, "bits": bits, "nonce": nonce, "blockhash": blockhash_str
+    }
+    

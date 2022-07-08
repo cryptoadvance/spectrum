@@ -69,3 +69,25 @@ def test_getblockhash(caplog, client):
     print(json.loads(result.data))
     
     assert len(json.loads(result.data)["result"]) == 64
+
+def test_rescanblockchain(caplog, client):
+    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="cryptoadvance.spectrum")
+
+    result = client.post("/", json={
+        "method":"createwallet",
+        "params": ["name_of_wallet"],
+        "jsonrpc": "2.0",
+        "id": 0,
+    })
+    assert result.status == "200 OK"
+
+    result = client.post("/wallet/name_of_wallet", json={
+        "method":"rescanblockchain",
+        "params": [0],
+        "jsonrpc": "2.0",
+        "id": 0,
+    })
+    
+    assert result.status_code == 200
+    print(json.loads(result.data))
