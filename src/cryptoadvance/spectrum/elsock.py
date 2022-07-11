@@ -112,7 +112,7 @@ class ElectrumSocket:
             #time.sleep(1)
             time.sleep(0.01)
             if time.time() - start > self._timeout:
-                raise SpectrumException(f"Timeout ({self._timeout} seconds) waiting for {method}")
+                raise SpectrumException(f"Timeout ({self._timeout} seconds) waiting for {method} on {self._socket}")
         res = self._results.pop(uid)
         if "error" in res:
             raise ValueError(res["error"])

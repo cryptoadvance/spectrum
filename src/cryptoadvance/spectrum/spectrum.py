@@ -92,7 +92,7 @@ class Spectrum:
             logger.info(f"Creating txdir {self.txdir} ")
             os.makedirs(self.txdir)
         try:
-            logger.info(f"Creating ElectrumSocket {host}:{port}")
+            logger.info(f"Creating ElectrumSocket {host}:{port} (ssl={ssl})")
             self.sock = ElectrumSocket(
                 host=host, port=port, callback=self.process_notification, use_ssl=ssl
             )
@@ -106,7 +106,7 @@ class Spectrum:
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
         if self.sock:
-           
+            logger.info(f"Pinged electrum in {self.sock.ping()} ")
             logger.info("subscribe to block headers")
             res = self.sock.call("blockchain.headers.subscribe")
             self.blocks = res["height"]

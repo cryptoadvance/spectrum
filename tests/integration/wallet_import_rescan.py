@@ -34,16 +34,6 @@ logger = logging.getLogger("cryptoadvance")
 number_of_txs = 10
 keypoolrefill = number_of_txs
 
-def test_logging(caplog,
-    empty_data_folder,
-    acc0xprv_hold_accident,
-    acc0key_hold_accident,
-    rootkey_hold_accident,
-    ):
-    caplog.set_level(logging.INFO)
-    logger.info("MUUUH")
-    assert False
-
 def test_import_nigiri_core(
     caplog,
     empty_data_folder,
@@ -91,9 +81,9 @@ def test_import_spectrum_nigiri_electrs_core(
     caplog,
     app_nigiri,
     empty_data_folder,
-    acc0xprv_hold_accident,
-    acc0key_hold_accident,
-    rootkey_hold_accident,
+    acc0xprv_keen_join,
+    acc0key_keen_join,
+    rootkey_keen_join,
     ):
     ''' Test is using a rpc connecting to spectrum which is connected via nigiri's electrs to nigiri's core
     '''
@@ -106,8 +96,8 @@ def test_import_spectrum_nigiri_electrs_core(
         keypoolrefill,
         caplog,
         empty_data_folder,
-        acc0key_hold_accident,
-        rootkey_hold_accident
+        acc0key_keen_join,
+        rootkey_keen_join
     )
 
 
@@ -117,8 +107,8 @@ def runtest_import_via(spectrum_rpc,
     keypoolrefill,
     caplog,
     empty_data_folder,
-    acc0key_hold_accident,
-    rootkey_hold_accident,
+    acc0key,
+    rootkey,
     ):
     
     # caplog.set_level(logging.DEBUG)
@@ -129,8 +119,8 @@ def runtest_import_via(spectrum_rpc,
     #     tg = TrafficGen()
     #     tg.number_of_txs = i
     #     tg.keypoolrefill = i
-    #     tg.rootkey_hold_accident = rootkey_hold_accident
-    #     tg.acc0key_hold_accident = acc0key_hold_accident
+    #     tg.rootkey = rootkey
+    #     tg.acc0key = acc0key
 
     #     tg.empty_data_folder = empty_data_folder
     #     durations[i] = tg.main()
@@ -149,11 +139,11 @@ def runtest_import_via(spectrum_rpc,
     btc_rpc.generatetoaddress(110, w0.getnewaddress())
     logger.info(f"result of getbalances (w0 / mine / trusted ): {w0.getbalances()['mine']['trusted']}")
 
-    # w1 contains the private keys acc0xprv_hold_accident
+    # w1 contains the private keys acc0xprv
     if w1_walletname not in btc_rpc.listwallets():
         btc_rpc.createwallet(w1_walletname, blank=True, descriptors=True)
     w1 = btc_rpc.wallet(w1_walletname)
-    tpriv = rootkey_hold_accident.to_base58(
+    tpriv = rootkey.to_base58(
         version=NETWORKS["regtest"]["xprv"]
     )
 
@@ -205,7 +195,7 @@ def runtest_import_via(spectrum_rpc,
         allow_threading=False,
     )
     wallet: Wallet = wm.create_wallet(
-        "hold_accident", 1, "wpkh", [acc0key_hold_accident], MagicMock()
+        "hold_accident", 1, "wpkh", [acc0key], MagicMock()
     )
     hold_accident = spectrum_rpc.wallet("specter/hold_accident")
     ha_zero_address = wallet.get_address(0) # the defaultwallet is already used
