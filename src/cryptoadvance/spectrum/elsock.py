@@ -6,18 +6,19 @@ import random
 import time
 import threading
 import sys
-from .util import handle_exception
+from .util import SpectrumException, handle_exception
 
 # TODO: normal handling of ctrl+C interrupt
 
 logger = logging.getLogger(__name__)
 
 class ElectrumSocket:
-    def __init__(self, host="127.0.0.1", port=50001, use_ssl=False, callback=None):
+    def __init__(self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10):
         self._host = host
         self._port = port
         self.running = True
         self._callback = callback
+        self._timeout = timeout
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if use_ssl:
             logger.info(f"Using ssl while connectiong to {self._socket}")
@@ -72,6 +73,7 @@ class ElectrumSocket:
 
     def recv(self):
         while self.running:
+
             data = self._socket.recv(2048)
             while not data.endswith(b"\n"):
                 data += self._socket.recv(2048)
@@ -105,11 +107,12 @@ class ElectrumSocket:
         obj = {"jsonrpc": "2.0", "method": method, "params": params, "id": uid}
         self._requests.append(obj)
         start = time.time()
+        
         while uid not in self._results:  # wait for response
             #time.sleep(1)
             time.sleep(0.01)
-            if time.time() - start > 10:
-                raise Exception(f"Timeout waiting for {method}")
+            if time.time() - start > self._timeout:
+                raise SpectrumException(f"Timeout ({self._timeout} seconds) waiting for {method}")
         res = self._results.pop(uid)
         if "error" in res:
             raise ValueError(res["error"])

@@ -1,23 +1,22 @@
 from binascii import hexlify, unhexlify
 import io
 import time
+
+import mock
+import pytest
 from cryptoadvance.spectrum.elsock import ElectrumSocket
 import hashlib
 import struct
 
+from cryptoadvance.spectrum.util import SpectrumException
+
 
 def test_elsock(config):
-    es = ElectrumSocket(host=config.ELECTRUM_HOST, port=config.ELECTRUM_PORT)
-    res = es.ping()
-    print(f"ping took {res} seconds")
-    
-    res = es.call("server.version", [0])
-    print("\nserver.version:")
-    print(res)
-
-    res = es.call("blockchain.headers.subscribe")
-    print("\nblockchain.headers.subscribe :")
-    print(res)
+    with mock.patch('cryptoadvance.spectrum.elsock.socket.socket'):
+        print(time.time())
+        es = ElectrumSocket(host=config.ELECTRUM_HOST, port=config.ELECTRUM_PORT, timeout=1)
+        with pytest.raises(SpectrumException):
+            res = es.ping()
 
 
 

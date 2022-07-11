@@ -27,7 +27,8 @@ def btc_to_sat(btc):
     btc = btc or 0  # if None is passed
     return round(btc * 1e8)
 
-
+class SpectrumException(Exception):
+    pass
 
 def handle_exception(exception):
     ''' prints the exception and most important the stacktrace '''
