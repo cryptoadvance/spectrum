@@ -68,7 +68,7 @@ def test_getblockhash(caplog, client):
     assert result.status_code == 200
     print(json.loads(result.data))
     
-    assert len(json.loads(result.data)["result"]) == 64
+    assert json.loads(result.data)["result"] == ''
 
 def test_rescanblockchain(caplog, client):
     caplog.set_level(logging.DEBUG)
