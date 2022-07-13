@@ -55,28 +55,6 @@ def test_import_nigiri_core(
         rootkey_hold_accident
     )
 
-def test_import_sregtest_core(
-    caplog,
-    bitcoin_regtest,
-    empty_data_folder,
-    acc0xprv_hold_accident,
-    acc0key_hold_accident,
-    rootkey_hold_accident,
-    ):
-    ''' Test is using a rpc connecting the core created by the bitcoin_regtest fixture
-    '''
-    caplog.set_level(logging.INFO)
-    rpc: BitcoinRPC = bitcoin_regtest.get_rpc()
-    runtest_import_via(rpc,
-        rpc,
-        number_of_txs,
-        keypoolrefill,
-        caplog,
-        empty_data_folder,
-        acc0key_hold_accident,
-        rootkey_hold_accident
-    )
-
 def test_import_spectrum_nigiri_electrs_core( 
     caplog,
     app_nigiri,
