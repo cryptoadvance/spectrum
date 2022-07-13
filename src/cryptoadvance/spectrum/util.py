@@ -53,7 +53,7 @@ class FlaskThread(Thread):
 # inspired by Jimmy:
 # https://github.com/jimmysong/programmingbitcoin/blob/3fba6b992ece443e4256df057595cfbe91edda75/code-ch09/answers.py#L109-L123
 
-def little_endian_to_int(b):
+def _little_endian_to_int(b):
     '''little_endian_to_int takes byte sequence as a little-endian number.
     Returns an integer'''
     return int.from_bytes(b, 'little')  
@@ -68,10 +68,10 @@ def parse_blockheader( s):
         blockhash_bytes = hashlib.sha256(hashlib.sha256(mybytes).digest()).digest()[::-1]
         blockhash_str = hexlify(blockhash_bytes).decode()
         s = io.BytesIO(s)
-    version = little_endian_to_int(s.read(4))
+    version = _little_endian_to_int(s.read(4))
     prev_block = s.read(32)[::-1]
     merkle_root = s.read(32)[::-1]
-    timestamp = little_endian_to_int(s.read(4))
+    timestamp = _little_endian_to_int(s.read(4))
     bits = s.read(4)
     nonce = s.read(4)
     return { "version":version, "prev_block": prev_block, "merkle_root": merkle_root, 

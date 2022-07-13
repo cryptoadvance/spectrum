@@ -123,7 +123,6 @@ class Spectrum:
         return os.path.join(self.datadir, "txs")
 
     def _sync(self):
-        logger.info(f"Syncing ... {self.sock}")
         if not self.sock:
             logger.info("Not Syncing in offline-mode ...")
             return
