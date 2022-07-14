@@ -33,13 +33,13 @@ class BaseConfig(object):
     USERNAME='admin'
     HOST="127.0.0.1"
     PORT=8081
+    DATADIR="data" # used for sqlite but also for txs-cache
 
 # Level 1: How does persistence work?
 # Convention: BlaConfig
 
 class LiteConfig(BaseConfig):
-    DATADIR="data"
-    DATABASE=os.path.abspath(os.path.join(DATADIR, "wallets.sqlite"))
+    DATABASE=os.path.abspath(os.path.join(BaseConfig.DATADIR, "wallets.sqlite"))
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 

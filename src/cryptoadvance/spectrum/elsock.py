@@ -21,10 +21,11 @@ class ElectrumSocket:
         self._timeout = timeout
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if use_ssl:
-            logger.info(f"Using ssl while connectiong to {self._socket}")
+            logger.info(f"Using ssl while connecting to {self._socket}")
             self._socket = ssl.wrap_socket(self._socket)
         self._socket.settimeout(5)
         self._socket.connect((host, port))
+        self._socket.settimeout(None)
         self._results = {}  # store results of the calls here
         self._requests = []
         self._notifications = []
