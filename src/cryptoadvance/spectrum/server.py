@@ -28,14 +28,15 @@ def create_app(config="cryptoadvance.spectrum.config.LocalElectrumConfig"):
     app.logger.info("Config from "+os.environ.get("CONFIG","empty"))
     for key, value in sorted(app.config.items()):
         if key in ["DB_PASSWORD","SECRET_KEY","SQLALCHEMY_DATABASE_URI"]:
-            app.logger.info("{} = {}".format(key,"xxxxxxxxxxxx"))
+            app.logger.debug("{} = {}".format(key,"xxxxxxxxxxxx"))
         else:
-            app.logger.info("{} = {}".format(key,value))
+            app.logger.debug("{} = {}".format(key,value))
     app.logger.info("-----------------------------------------------------------")
 
     app.register_blueprint(core_api)
     app.register_blueprint(healthz)
 
+    app.logger.info(f"Creating Database Structure {app.config['SQLALCHEMY_DATABASE_URI']}...")
     with app.app_context():
         db.create_all()
 

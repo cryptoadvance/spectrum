@@ -1,0 +1,5 @@
+black
+pytest
+pre-commit
+mock
+cryptoadvance.specter==1.10.3

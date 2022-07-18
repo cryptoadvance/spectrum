@@ -29,19 +29,21 @@ def _get_bool_env_var(varname, default=None):
 
 class BaseConfig(object):
     """Base configuration."""
-    DATADIR="data"
-    DATABASE=os.path.abspath(os.path.join(DATADIR, "wallets.sqlite"))
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
-    SQLALCHEMY_TRACK_MODIFICATIONS=False
     SECRET_KEY='development key'
     USERNAME='admin'
     HOST="127.0.0.1"
     PORT=8081
 
-    ELECTRUM_USES_SSL=False
+# Level 1: How does persistence work?
+# Convention: BlaConfig
 
+class LiteConfig(BaseConfig):
+    DATADIR="data"
+    DATABASE=os.path.abspath(os.path.join(DATADIR, "wallets.sqlite"))
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
+    SQLALCHEMY_TRACK_MODIFICATIONS=False
 
-class PostgresBasedConfig(BaseConfig):
+class PostgresConfig(BaseConfig):
     """Development configuration with Postgres."""
     DEBUG = True
     DB_USERNAME = os.environ.get('DB_USER', default='spectrum')
@@ -52,23 +54,31 @@ class PostgresBasedConfig(BaseConfig):
     SQL_ALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = f'postgresql+psycopg2://{DB_HOST}:{DB_PORT}/{DB_DATABASE}?user={DB_USERNAME}&password={DB_PASSWORD}' # &ssl=true
 
-
-class LocalElectrumLiteConfig(BaseConfig):
+# Level 2: Where do we get an electrum from ?
+# Convention: Prefix a level 1 config with the electrum solution
+class NigiriLocalElectrumLiteConfig(LiteConfig):
     ELECTRUM_HOST="127.0.0.1"
-    ELECTRUM_PORT=60401
+    ELECTRUM_PORT=50000
+    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false")
 
-class LiteConfig(BaseConfig):
+class EmzyElectrumLiteConfig(LiteConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
     ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
 
-class PostgresConfig(PostgresBasedConfig):
+class EmzyElectrumPostgresConfig(PostgresConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
     ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
 
-class TestConfig(LiteConfig):
+# Level 2: Back to the problem-Space.
+# Convention: ProblemConfig where problem is usually one of Test/Production or so
+
+class TestConfig(NigiriLocalElectrumLiteConfig):
     pass
 
-class ProductionConfig(PostgresBasedConfig):
+class ProductionConfig(EmzyElectrumPostgresConfig):
+    ''' Not sure whether we're production ready, though '''
     SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(16))
+
+

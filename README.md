@@ -24,3 +24,12 @@ Then connect Specter-Desktop to rpc port 8081 with any credentials
 - flask `debug=True` flag creates two electrum sockets that notify twice - this causes duplications in the database
 - reconnect with electrum on disconnect
 - add support for credentials / cookie file for RPC calls
+
+
+## Development
+
+Before your create a PR, make sure to [blackify](https://github.com/psf/black) all your changes. In order to automate that,
+there is a git [pre-commit hook](https://ljvmiranda921.github.io/notebook/2018/06/21/precommits-using-black-and-flake8/) which you can simply install like this:
+```
+pre-commit install
+```
