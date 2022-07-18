@@ -1,6 +1,7 @@
-embit==0.4.14
+embit==0.5.0
 flask
 Flask-SQLAlchemy
 requests
 psycopg2-binary
 pytest
+simplejson

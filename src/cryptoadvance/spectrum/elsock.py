@@ -56,10 +56,15 @@ class ElectrumSocket:
     def ping_loop(self):
         while self.running:
             time.sleep(10)
+            tries = 0
             try:
                 self.ping()
+                tries = 0
             except Exception as e:
+                tries = tries + 1
                 logger.error("Error in ping", e)
+                if tries > 10:
+                    logger.fatal("Ping failure. I guess we lost the connection. What to do now?!")
                 handle_exception(e)
 
     def recv_loop(self):
