@@ -1,4 +1,6 @@
-import json,logging
+import logging
+from decimal import Decimal
+import simplejson as json # need that to json.dumps decimals
 
 from flask import (
     Blueprint,
@@ -29,7 +31,9 @@ def walletrpc(wallet_name=""):
         return "JSONRPC server handles only POST requests"
     data = request.get_json()
     if isinstance(data, dict):
-        return json.dumps(app.spectrum.jsonrpc(data, wallet_name=wallet_name))
+        return json.dumps(
+            app.spectrum.jsonrpc(data, wallet_name=wallet_name)
+        )
     if isinstance(data, list):
         return json.dumps(
             [app.spectrum.jsonrpc(item, wallet_name=wallet_name) for item in data]
