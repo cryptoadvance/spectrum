@@ -1,3 +1,4 @@
+from decimal import Decimal
 import json
 import logging
 import math
@@ -60,7 +61,9 @@ def walletrpc(f):
 
 
 class RPCError(Exception):
-    def __init__(self, message, code=-18):
+    ''' Should use one of : https://github.com/bitcoin/bitcoin/blob/v22.0/src/rpc/protocol.h#L25-L88 
+    '''
+    def __init__(self, message, code=-1): # -1 is RPC_MISC_ERROR
         self.message = message
         self.code = code
 
@@ -294,7 +297,7 @@ class Spectrum:
     def get_wallet(self, wallet_name):
         w = Wallet.query.filter_by(name=wallet_name).first()
         if not w:
-            raise RPCError("Requested wallet does not exist or is not loaded", -18)
+            raise RPCError(f"Requested wallet {wallet_name} does not exist or is not loaded", -18)
         return w
 
     def jsonrpc(self, obj, wallet_name=None):
@@ -303,6 +306,8 @@ class Spectrum:
         params = obj.get("params", [])
         logger.info(f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}")
         try:
+            args = None
+            kwargs = None
             # get wallet by name
             wallet = self.get_wallet(wallet_name) if wallet_name is not None else None
             # unknown method
@@ -324,11 +329,11 @@ class Spectrum:
             else:
                 res = m(*args, **kwargs)
         except RPCError as e:
-            logger.error(f"FAIL method {method} wallet {wallet_name} exc {e}")
+            logger.error(f"FAIL method: {method} wallet: {wallet_name} args: {args} kwargs: {kwargs} exc {e}")
             return dict(result=None, error=e.to_dict(), id=id)
         except Exception as e:
-            logger.error(f"FAIL method {method} wallet {wallet_name} exc {e}")
-            print(traceback.format_exc())
+            logger.error(f"FAIL method: {method} wallet: {wallet_name} args: {args} kwargs: {kwargs} exc {e}")
+            handle_exception(e)
             return dict(result=None, error={"code": -500, "message": str(e)}, id=id)
         return dict(result=res, error=None, id=id)
 
@@ -757,8 +762,8 @@ class Spectrum:
     def getbalances(self, wallet):
         confirmed, unconfirmed = self._get_balance(wallet)
         b = {
-            "trusted": round(confirmed * 1e-8, 8),
-            "untrusted_pending": round(unconfirmed * 1e-8, 8),
+            "trusted": round(confirmed * Decimal(1e-8), 8),
+            "untrusted_pending": round(unconfirmed * Decimal(1e-8), 8),
             "immature": 0.0,
         }
         if wallet.private_keys_enabled:

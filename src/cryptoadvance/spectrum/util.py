@@ -3,6 +3,7 @@ import hashlib
 import io
 import logging
 from threading import Thread
+from decimal import Decimal
 
 from embit import hashes
 from flask import current_app as app
@@ -19,13 +20,17 @@ def scripthash(script):
 
 
 def sat_to_btc(sat):
-    sat = sat or 0  # if None is passed
-    return round(sat * 1e-8, 8)
+    if not isinstance(sat, Decimal):
+        sat = Decimal(sat)
+    sat = sat or Decimal(0)  # if None is passed
+    return Decimal(round(sat * Decimal(1e-8), 8))
 
 
 def btc_to_sat(btc):
-    btc = btc or 0  # if None is passed
-    return round(btc * 1e8)
+    if not isinstance(btc, Decimal):
+        btc = Decimal(btc)
+    btc = btc or Decimal(0)  # if None is passed
+    return round(btc * Decimal(1e8))
 
 class SpectrumException(Exception):
     pass
