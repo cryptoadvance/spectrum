@@ -12,7 +12,7 @@ virtualenv --python=python3 .env
 . ./.env/bin/activate
 pip3 install -e .
 # If you have a electrum server running on localhost:
-python3 -m cryptoadvance.spectrum server --config cryptoadvance.spectrum.config.LocalElectrumLiteConfig
+python3 -m cryptoadvance.spectrum server --config cryptoadvance.spectrum.config.NigiriLocalElectrumLiteConfig
 ```
 
 Check the `config.py` for the env-vars which need to be exported in order to connect to something different than localhost.

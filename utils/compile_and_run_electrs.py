@@ -66,7 +66,7 @@ def create_config(node_config):
 
         # The address on which electrs should listen. Warning: 0.0.0.0 is probably a bad idea!
         # Tunneling is the recommended way to access electrs remotely.
-        electrum_rpc_addr = "127.0.0.1:50001"
+        electrum_rpc_addr = "127.0.0.1:50000"
 
         # How much information about internal workings should electrs print. Increase before reporting a bug.
         log_filters = "INFO"    
