@@ -1,5 +1,9 @@
 data
 config.toml
+utils/db/
+utils/electrs-0.9.9/
+utils/electrs.toml
+utils/electrs.tar.gz
 
 tests/bitcoin*
 
