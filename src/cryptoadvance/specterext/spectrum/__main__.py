@@ -1,4 +1,4 @@
-from cryptoadvance.specter.cli import entry_point
+from cryptoadvance.specterext.spectrum.cli import entry_point
 from cryptoadvance.specter.cli.cli_server import server
 import logging
 import click

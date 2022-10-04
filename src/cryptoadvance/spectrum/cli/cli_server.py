@@ -1,6 +1,6 @@
 import logging
 import os
-from ..server import create_app, init_app
+from cryptoadvance.specterext.spectrum.server import create_app, init_app
 import click
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ def cli():
 @click.option("--key")
 @click.option(
     "--config",
-    default="cryptoadvance.spectrum.config.LocalElectrumConfig",
+    default="cryptoadvance.specterext.spectrum.config.LocalElectrumConfig",
     help="A class which sets reasonable default values.",
 )
 def server( port, host, cert, key, config):

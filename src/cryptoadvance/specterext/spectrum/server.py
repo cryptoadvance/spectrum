@@ -10,21 +10,22 @@ from .spectrum import Spectrum
 
 logger = logging.getLogger(__name__)
 
-def create_app(config="cryptoadvance.spectrum.config.LocalElectrumConfig"):
+def create_app(config="cryptoadvance.specterext.spectrum.config.EmzyElectrumLiteConfig"):
     if os.environ.get("CONFIG"):
         config = os.environ.get("CONFIG")
     app = Flask(__name__)
     app.config.from_object(config)
     logger.info(f"config: {config}")
 
-    # create folder if doesn't exist
-    if not os.path.exists(app.config["DATADIR"]):
-        os.makedirs(app.config["DATADIR"])
+
 
 
     return app
 
 def init_app(app, standalone=True):
+    # create folder if doesn't exist
+    if not os.path.exists(app.config["DATADIR"]):
+        os.makedirs(app.config["DATADIR"])
     db.init_app(app)
     
 
@@ -41,7 +42,7 @@ def init_app(app, standalone=True):
                 else:
                     app.logger.info("{} = {}".format(key,value))
             app.logger.info("-----------------------------------------------------------")
-            from .server_endpoints.core_api import core_api
+            from cryptoadvance.spectrum.server_endpoints.core_api import core_api
             from .server_endpoints.healthz import healthz
             app.register_blueprint(core_api)
             app.register_blueprint(healthz)
@@ -85,7 +86,8 @@ def main():
             # "port": 143,
         },
     }
-    app = create_app(config)
+    app = create_app()
+    init_app(app)
     app.run(debug=config["debug"], port=config["port"], host=config["host"])
 
 

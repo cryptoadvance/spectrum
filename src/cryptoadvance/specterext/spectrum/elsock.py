@@ -21,15 +21,16 @@ class ElectrumSocket:
         self._callback = callback
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if use_ssl:
-            logger.info(f"Using ssl while connectiong to {self._socket}")
+            logger.info(f"Using ssl while connection to {self._socket}")
             self._socket = ssl.wrap_socket(self._socket)
         # first check
-        check = self._socket.connect_ex((host,port))
-        if check != 0:
-            raise Exception("Port for electrum is not open")
-        if self._socket._connected:
+        # check = self._socket.connect_ex((host,port))
+        # if check != 0:
+        #     raise Exception("Port for electrum is not open")
+        if hasattr(self._socket,"_connected") and self._socket._connected:
             print("Connected!")
             self._socket.close()
+            assert not self._socket._connected
         self._socket.connect((host, port))
         # except ValueError as ve:
         #     if str(ve).startswith("attempt to connect already-connected SSLSocket!"):
