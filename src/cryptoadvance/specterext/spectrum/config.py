@@ -16,8 +16,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# ToDo: Avoid double config
-
 def _get_bool_env_var(varname, default=None):
     value = os.environ.get(varname, default)
     if value is None:
@@ -29,12 +27,13 @@ def _get_bool_env_var(varname, default=None):
     else:
         return bool(value)
 
-class BaseConfig(object):
-    """Base configuration."""
-    SECRET_KEY='development key'
-    USERNAME='admin'
+class StandaloneConfig:
     HOST="127.0.0.1"
     PORT=8081
+    SECRET_KEY='development key'
+class BaseConfig(object):
+    """Base configuration."""
+    USERNAME='admin'
     DATADIR="data" # used for sqlite but also for txs-cache
 
 # Level 1: How does persistence work?
@@ -79,8 +78,14 @@ class EmzyElectrumPostgresConfig(PostgresConfig):
 class TestConfig(NigiriLocalElectrumLiteConfig):
     pass
 
-class ProductionConfig(EmzyElectrumPostgresConfig):
+class DevelopmentConfig(EmzyElectrumLiteConfig):
+    ''' Not sure whether we're production ready, though '''
+    pass
+
+class ProductionConfigStandalone(EmzyElectrumPostgresConfig, StandaloneConfig):
     ''' Not sure whether we're production ready, though '''
     SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(16))
 
-
+class ProductionConfig(EmzyElectrumPostgresConfig):
+    ''' Not sure whether we're production ready, though '''
+    pass
