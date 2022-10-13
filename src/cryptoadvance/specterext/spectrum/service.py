@@ -1,10 +1,12 @@
 import logging
 
+from cryptoadvance.specter.managers.node_manager import NodeManager
 from cryptoadvance.specter.services.service import Service, devstatus_alpha, devstatus_prod, devstatus_beta
 # A SpecterError can be raised and will be shown to the user as a red banner
 from cryptoadvance.specter.specter_error import SpecterError
 from flask import current_app as app
 from flask_apscheduler import APScheduler
+from cryptoadvance.specterext.spectrum.spectrum_node import SpectrumNode
 from cryptoadvance.spectrum.server import init_app
 
 logger = logging.getLogger(__name__)
@@ -43,6 +45,22 @@ class SpectrumService(Service):
         # Maybe you should store the scheduler for later use:
         self.scheduler = scheduler
         init_app(app, standalone=False)
+        
+        
+        for node in app.specter.node_manager.nodes.values():
+            if node.fqcn == "cryptoadvance.specterext.spectrum.spectrum_node.SpectrumNode":
+                node.spectrum = app.spectrum
+                return
+        
+        # No SpectrumNode yet created. Let's do that.
+        app.specter.node_manager.save_node(SpectrumNode(app.spectrum))
 
-    def initial_node_contribution(self):
+
+    def callback_initial_node_contribution(self, node_manager:NodeManager):
+        logger.info("Creating SpectrumNode")
+        return [ SpectrumNode(app.spectrum) ]
+
+    def create_nodes(self, node_dicts):
+        ''' Gets a huge dict with node-descriptions and returns nodes it can create Nodes-objects from '''
+        print(node_dicts)
         pass
