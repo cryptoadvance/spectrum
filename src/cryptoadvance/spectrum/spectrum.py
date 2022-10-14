@@ -762,8 +762,8 @@ class Spectrum:
     def getbalances(self, wallet):
         confirmed, unconfirmed = self._get_balance(wallet)
         b = {
-            "trusted": round(confirmed * Decimal(1e-8), 8),
-            "untrusted_pending": round(unconfirmed * Decimal(1e-8), 8),
+            "trusted": round(confirmed * 1e-8, 8),
+            "untrusted_pending": round(unconfirmed * 1e-8, 8),
             "immature": 0.0,
         }
         if wallet.private_keys_enabled:

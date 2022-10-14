@@ -20,6 +20,11 @@ def scripthash(script):
 
 
 def sat_to_btc(sat):
+    ''' Core is returning floats which is not good. We need to switch over to decimal at some point 
+        but this is not yet used yet.
+        If we do it, also have a look at:
+        https://github.com/relativisticelectron/specter-desktop/pull/3
+    '''
     if not isinstance(sat, Decimal):
         sat = Decimal(sat)
     sat = sat or Decimal(0)  # if None is passed
