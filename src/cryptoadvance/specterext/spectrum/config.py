@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import datetime
 import secrets
+from flask import current_app as app
 
 try:
     # Python 2.7
@@ -40,7 +41,13 @@ class BaseConfig(object):
 # Convention: BlaConfig
 
 class LiteConfig(BaseConfig):
-    DATABASE=os.path.abspath(os.path.join(BaseConfig.DATADIR, "wallets.sqlite"))
+    # The Folder to store the DB into is chosen here NOT to be spectrum-extension specific.
+    # We're using Flask-Sqlalchemy and so we can only use one DB per App so we assume that
+    # the DB is shared between different Extensions.
+    # Instead, the tables are all prefixed with "spectrum_"
+    # ToDo: separate the other stuff /txs) in a separate directory
+    DATADIR=os.path.join(app.config["SPECTER_DATA_FOLDER"], "sqlite")
+    DATABASE=os.path.abspath(os.path.join(DATADIR, "db.sqlite"))
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 
@@ -79,13 +86,8 @@ class TestConfig(NigiriLocalElectrumLiteConfig):
     pass
 
 class DevelopmentConfig(EmzyElectrumLiteConfig):
-    ''' Not sure whether we're production ready, though '''
     pass
 
-class ProductionConfigStandalone(EmzyElectrumPostgresConfig, StandaloneConfig):
-    ''' Not sure whether we're production ready, though '''
-    SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(16))
-
-class ProductionConfig(EmzyElectrumPostgresConfig):
+class ProductionConfig(EmzyElectrumLiteConfig):
     ''' Not sure whether we're production ready, though '''
     pass
