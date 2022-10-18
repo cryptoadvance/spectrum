@@ -28,12 +28,8 @@ def _get_bool_env_var(varname, default=None):
     else:
         return bool(value)
 
-class StandaloneConfig:
-    HOST="127.0.0.1"
-    PORT=8081
-    SECRET_KEY='development key'
 class BaseConfig(object):
-    """Base configuration."""
+    """Base configuration. Does not allow e.g. SECRET_KEY, so redefining here"""
     USERNAME='admin'
     DATADIR="data" # used for sqlite but also for txs-cache
 
@@ -51,17 +47,6 @@ class LiteConfig(BaseConfig):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 
-class PostgresConfig(BaseConfig):
-    """Development configuration with Postgres."""
-    DEBUG = True
-    DB_USERNAME = os.environ.get('DB_USER', default='spectrum')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD')
-    DB_HOST = os.environ.get('DB_HOST', default='127.0.0.1') # will be overridden in docker-compose, but good for dev
-    DB_PORT = os.environ.get('DB_PORT', default='5432')
-    DB_DATABASE = os.environ.get('DB_DATABASE', default='spectrum')
-    SQL_ALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_DATABASE_URI = f'postgresql+psycopg2://{DB_HOST}:{DB_PORT}/{DB_DATABASE}?user={DB_USERNAME}&password={DB_PASSWORD}' # &ssl=true
-
 # Level 2: Where do we get an electrum from ?
 # Convention: Prefix a level 1 config with the electrum solution
 class NigiriLocalElectrumLiteConfig(LiteConfig):
@@ -70,11 +55,6 @@ class NigiriLocalElectrumLiteConfig(LiteConfig):
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false")
 
 class EmzyElectrumLiteConfig(LiteConfig):
-    ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
-    ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
-    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
-
-class EmzyElectrumPostgresConfig(PostgresConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')
     ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")

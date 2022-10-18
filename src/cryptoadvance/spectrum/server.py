@@ -11,7 +11,7 @@ from .server_endpoints.healthz import healthz
 
 logger = logging.getLogger(__name__)
 
-def create_app(config="cryptoadvance.specterext.spectrum.config.EmzyElectrumLiteConfig"):
+def create_app(config="cryptoadvance.spectrum.config.EmzyElectrumLiteConfig"):
     if os.environ.get("CONFIG"):
         config = os.environ.get("CONFIG")
     app = Flask(__name__)

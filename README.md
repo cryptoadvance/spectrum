@@ -3,7 +3,11 @@
 This is a electrum-adapter. It exposes a Bitcoin-Core style API while using an electron API in the backend. It might be useful in specific usecases, e.g. having better performance when connecting to a electrum-server via Tor. In order to do that, it needs a Database. Quite easily you can use a kind of builtin SQLite. Depending on your usecase, you might want to use an external DB.
 
 Note! Requires embit from master branch. (Still true?!)
+## Modes of usage
 
+This can be used either in standalone mode or as a specter-extension. The second option is probably the main use-case.
+
+## Standalone
 
 Get this to work with something like that:
 ```
@@ -11,12 +15,32 @@ python3 --version # Make sure you have at least 3.8. Might also work with lower 
 virtualenv --python=python3 .env
 . ./.env/bin/activate
 pip3 install -e .
+
 # If you have a electrum server running on localhost:
 python3 -m cryptoadvance.spectrum server --config cryptoadvance.spectrum.config.LocalElectrumLiteConfig
+
+# If you want to run on mainnet and use emzy's Server
+python3 -m cryptoadvance.spectrum server --config cryptoadvance.spectrum.config.EmzyElectrumLiteConfig
+
+# Using Emzy's server but with a postgres
+export DB_USERNAME=bla
+export DB_PASSWORD=blub
+python3 -m cryptoadvance.spectrum server --config cryptoadvance.spectrum.config.EmzyElectrumPostgresConfig
 ```
 
 Check the `config.py` for the env-vars which need to be exported in order to connect to something different than localhost.
-Then connect Specter-Desktop to rpc port 8081 with any credentials
+
+## Specter Extension
+
+In order to get a development environment:
+```
+virtualenv --python=python3 .env
+. ./.env/bin/activate
+pip3 install -e .
+pip3 install cryptoadvance.specter
+python3 -m cryptoadvance.specter server --config DevelopmentConfig --debug
+```
+
 
 ## TODO:
 
