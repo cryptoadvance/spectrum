@@ -79,22 +79,9 @@ class SpectrumNode(AbstractNode):
         ''' No need to do anything '''
         pass
 
-    def rendering_table(self):
-        return '''
-        <h1>Spectrum Node</h1>
-        <table>
-        <tr> <td style="text-align: left;">{{ _("Network") }}:</td> <td style="text-align: right;" id="node-info-specter-chain">{{specter.chain}}</td> </tr>
-        <tr> <td style="text-align: left; width: 35%;">{{ _("Bitcoin Core Version") }}:</td> <td style="text-align: right;">v{{specter.bitcoin_core_version}} <span class="note">({{specter.network_info['version']}})</span></td> </tr>
-        <tr> <td style="text-align: left;">{{ _("Connections count") }}:</td> <td style="text-align: right;">{{specter.network_info['connections']}}</td> </tr>
-        <tr> <td style="text-align: left;">{{ _("Difficulty") }}:</td> <td style="text-align: right;">{{specter.info.get('difficulty', 0) | int}}</td> </tr>
-        <tr> <td style="text-align: left;">{{ _("Size on disk") }}:</td> <td style="text-align: right;">{{specter.info['size_on_disk']|bytessize }}</td> </tr>
-        <tr> <td style="text-align: left;">{{ _("Blocks count") }}:</td> <td style="text-align: right;">{{specter.info['blocks']}}</td> </tr>
-        <tr> <td style="text-align: left;">{{ _("Last block hash") }}:</td> <td style="text-align: right"><code style="word-break: break-word;">{{specter.info['bestblockhash']}}</code></td> </tr>
-        <tr> <td style="text-align: left;">{{ _("Node uptime") }}:</td> <td style="text-align: right;">~ {{(specter.node.uptime / 60 // 60) | int }} {{ _("Hours") }}</td> </tr>
-        {% if specter.info['pruned'] %}
-            <tr> <td style="text-align: left;">{{ _("Automatic pruning") }}:</td> <td style="text-align: right;">{{specter.info['automatic_pruning']}}</td> </tr>
-            <tr> <td style="text-align: left;">{{ _("Prune height") }}:</td> <td style="text-align: right;">{{specter.info['pruneheight']}}</td> </tr>
-            <tr> <td style="text-align: left;">{{ _("Prune target size") }}:</td> <td style="text-align: right;">{{specter.info['prune_target_size']}}</td> </tr>
-        {% endif %}
-        </table>
-        '''
+    def node_info_template(self):
+
+        #return render_template("spectrum/components/bitcoin_core_info.jinja")
+        from os import path
+        myfile_path = path.join(path.dirname(__file__), 'server_endpoints','templates','spectrum', 'components', 'bitcoin_core_info.jinja')
+        return open(myfile_path).read()
