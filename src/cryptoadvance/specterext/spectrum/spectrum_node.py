@@ -80,8 +80,4 @@ class SpectrumNode(AbstractNode):
         pass
 
     def node_info_template(self):
-
-        #return render_template("spectrum/components/bitcoin_core_info.jinja")
-        from os import path
-        myfile_path = path.join(path.dirname(__file__), 'server_endpoints','templates','spectrum', 'components', 'bitcoin_core_info.jinja')
-        return open(myfile_path).read()
+        return "spectrum/components/spectrum_info.jinja"
