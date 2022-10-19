@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 class SpectrumService(Service):
     id = "spectrum"
     name = "Spectrum Service"
-    icon = "spectrum/img/ghost.png"
-    logo = "spectrum/img/logo.jpeg"
-    desc = "Where a spectrum grows bigger."
+    icon = "spectrum/img/logo.svg"
+    logo = "spectrum/img/logo.svg"
+    desc = "An electrum hidden behind a core API"
     has_blueprint = True
     blueprint_modules = { 
         "default":  "cryptoadvance.specterext.spectrum.server_endpoints.ui"

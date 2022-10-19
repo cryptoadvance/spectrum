@@ -25,7 +25,6 @@ def specter() -> Specter:
 
 @spectrum_endpoint.route("/")
 @login_required
-@user_secret_decrypted_required
 def index():
     return render_template(
         "spectrum/index.jinja",
@@ -34,7 +33,6 @@ def index():
 
 @spectrum_endpoint.route("/settings", methods=["GET"])
 @login_required
-@user_secret_decrypted_required
 def settings_get():
 
     # Get the user's Wallet objs, sorted by Wallet.name
@@ -49,7 +47,6 @@ def settings_get():
 
 @spectrum_endpoint.route("/settings", methods=["POST"])
 @login_required
-@user_secret_decrypted_required
 def settings_post():
     show_menu = request.form["show_menu"]
     user = app.specter.user_manager.get_user()
