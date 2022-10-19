@@ -76,18 +76,5 @@ class BridgeRPC(BitcoinRPC):
             url = url + "/wallet/{}".format(kwargs["wallet"])
         return [ self.spectrum.jsonrpc(item,wallet_name=self.wallet_name) for item in payload ]
 
-
-
-    def __getattr__(self, method):
-        def fn(*args, **kwargs):
-            r = self.multi([(method, *args)], **kwargs)[0]
-            if r["error"] is not None:
-                raise RPCError(
-                    f"Request error for method {method}: {r['error']['message']}", r
-                )
-            return r["result"]
-
-        return fn
-
     def __repr__(self) -> str:
-        return f"<BitcoinRpc {self.url}>"
+        return f"<BridgeRPC {self.spectrum}>"

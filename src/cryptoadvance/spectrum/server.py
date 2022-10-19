@@ -30,45 +30,28 @@ def init_app(app, datadir=None, standalone=True):
     if not os.path.exists(datadir):
         os.makedirs(datadir)
     db.init_app(app)
-    
 
-
-    if standalone:
-
-        with app.app_context():
-            db.create_all()
-            app.logger.info("-------------------------CONFIGURATION-OVERVIEW------------")
-            app.logger.info("Config from "+os.environ.get("CONFIG","empty"))
-            for key, value in sorted(app.config.items()):
-                if key in ["DB_PASSWORD","SECRET_KEY","SQLALCHEMY_DATABASE_URI"]:
-                    app.logger.info("{} = {}".format(key,"xxxxxxxxxxxx"))
-                else:
-                    app.logger.info("{} = {}".format(key,value))
-            app.logger.info("-----------------------------------------------------------")
-            from cryptoadvance.spectrum.server_endpoints.core_api import core_api
-            from .server_endpoints.healthz import healthz
-            app.register_blueprint(core_api)
-            app.register_blueprint(healthz)
-
-            # if not getattr(g, "electrum", None):
-            logger.info("Creating Spectrum Object ...")
-            app.spectrum = Spectrum(
-                app.config["ELECTRUM_HOST"],
-                app.config["ELECTRUM_PORT"],
-                datadir=app.config["DATADIR"],
-                app=app,
-                ssl=app.config["ELECTRUM_USES_SSL"]
-            )
-
-            app.spectrum.sync()
-
-    else:
+    with app.app_context():
         db.create_all()
+        app.logger.info("-------------------------CONFIGURATION-OVERVIEW------------")
+        app.logger.info("Config from "+os.environ.get("CONFIG","empty"))
+        for key, value in sorted(app.config.items()):
+            if key in ["DB_PASSWORD","SECRET_KEY","SQLALCHEMY_DATABASE_URI"]:
+                app.logger.info("{} = {}".format(key,"xxxxxxxxxxxx"))
+            else:
+                app.logger.info("{} = {}".format(key,value))
+        app.logger.info("-----------------------------------------------------------")
+        from cryptoadvance.spectrum.server_endpoints.core_api import core_api
+        from .server_endpoints.healthz import healthz
+        app.register_blueprint(core_api)
+        app.register_blueprint(healthz)
+
+        # if not getattr(g, "electrum", None):
         logger.info("Creating Spectrum Object ...")
         app.spectrum = Spectrum(
             app.config["ELECTRUM_HOST"],
             app.config["ELECTRUM_PORT"],
-            datadir=datadir,
+            datadir=app.config["DATADIR"],
             app=app,
             ssl=app.config["ELECTRUM_USES_SSL"]
         )

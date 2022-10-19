@@ -1,4 +1,5 @@
 import logging
+import os
 
 from cryptoadvance.specter.managers.node_manager import NodeManager
 from cryptoadvance.specter.services.service import Service, devstatus_alpha, devstatus_prod, devstatus_beta
@@ -7,7 +8,8 @@ from cryptoadvance.specter.specter_error import SpecterError
 from flask import current_app as app
 from flask_apscheduler import APScheduler
 from cryptoadvance.specterext.spectrum.spectrum_node import SpectrumNode
-from cryptoadvance.spectrum.server import init_app
+from cryptoadvance.spectrum.server import init_app, Spectrum
+from cryptoadvance.spectrum.db import db
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +31,32 @@ class SpectrumService(Service):
 
     def callback_after_serverpy_init_app(self, scheduler: APScheduler):
         # This will create app.spectrum
-        init_app(app, datadir=self.data_folder, standalone=False)
+        datadir = app.config["DATADIR"]
+        if not os.path.exists(datadir):
+            os.makedirs(datadir)
+        db.init_app(app)
+        db.create_all()
+        logger.info("Creating Spectrum Object ...")
+        self.spectrum = Spectrum(
+            app.config["ELECTRUM_HOST"],
+            app.config["ELECTRUM_PORT"],
+            datadir=self.data_folder,
+            app=app,
+            ssl=app.config["ELECTRUM_USES_SSL"]
+        )
+        self.spectrum.sync()
         
-        
+        has_spectrum_node = False
         for node in app.specter.node_manager.nodes.values():
             if node.fqcn == "cryptoadvance.specterext.spectrum.spectrum_node.SpectrumNode":
-                node.spectrum = app.spectrum
-                return
+                node.spectrum = self.spectrum
+                has_spectrum_node=True
         
-        # No SpectrumNode yet created. Let's do that.
-        app.specter.node_manager.save_node(SpectrumNode(app.spectrum))
+        if not has_spectrum_node:                
+            # No SpectrumNode yet created. Let's do that.
+            spectrum_node = SpectrumNode(self.spectrum)
+            app.specter.node_manager.nodes["spectrum_node"] = spectrum_node
+            app.specter.node_manager.save_node(spectrum_node)
 
 
     def callback_initial_node_contribution(self, node_manager:NodeManager):
