@@ -30,22 +30,8 @@ class SpectrumService(Service):
     sort_priority = 2
 
     def callback_after_serverpy_init_app(self, scheduler: APScheduler):
-        # This will create app.spectrum
-        datadir = app.config["DATADIR"]
-        if not os.path.exists(datadir):
-            os.makedirs(datadir)
-        db.init_app(app)
-        db.create_all()
-        logger.info("Creating Spectrum Object ...")
-        self.spectrum = Spectrum(
-            app.config["ELECTRUM_HOST"],
-            app.config["ELECTRUM_PORT"],
-            datadir=self.data_folder,
-            app=app,
-            ssl=app.config["ELECTRUM_USES_SSL"]
-        )
-        self.spectrum.sync()
-        
+
+        self.start_spectrum()
         has_spectrum_node = False
         for node in app.specter.node_manager.nodes.values():
             if node.fqcn == "cryptoadvance.specterext.spectrum.spectrum_node.SpectrumNode":
@@ -59,9 +45,21 @@ class SpectrumService(Service):
             app.specter.node_manager.save_node(spectrum_node)
 
 
-    def callback_initial_node_contribution(self, node_manager:NodeManager):
-        logger.info("Creating SpectrumNode")
-        return [ SpectrumNode(app.spectrum) ]
+    def start_spectrum(self):
+        ''' initializes the DB and instantiate Spectrum and syncs it '''
+        if not os.path.exists(app.config["SPECTRUM_DATADIR"])
+        logger.info(f"Intitializing Database in {app.config['SQLALCHEMY_DATABASE_URI']}")
+        db.init_app(app)
+        db.create_all()
+        logger.info("Creating Spectrum Object ...")
+        self.spectrum = Spectrum(
+            app.config["ELECTRUM_HOST"],
+            app.config["ELECTRUM_PORT"],
+            datadir=self.data_folder,
+            app=app,
+            ssl=app.config["ELECTRUM_USES_SSL"]
+        )
+        self.spectrum.sync()
 
     def create_nodes(self, node_dicts):
         ''' Gets a huge dict with node-descriptions and returns nodes it can create Nodes-objects from '''

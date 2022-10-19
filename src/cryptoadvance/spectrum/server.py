@@ -26,7 +26,7 @@ def create_app(config="cryptoadvance.spectrum.config.EmzyElectrumLiteConfig"):
 def init_app(app, datadir=None, standalone=True):
     # create folder if doesn't exist
     if datadir is None:
-        datadir = app.config["DATADIR"]
+        datadir = app.config["SPECTRUM_DATADIR"]
     if not os.path.exists(datadir):
         os.makedirs(datadir)
     db.init_app(app)
@@ -51,7 +51,7 @@ def init_app(app, datadir=None, standalone=True):
         app.spectrum = Spectrum(
             app.config["ELECTRUM_HOST"],
             app.config["ELECTRUM_PORT"],
-            datadir=app.config["DATADIR"],
+            datadir=app.config["SPECTRUM_DATADIR"],
             app=app,
             ssl=app.config["ELECTRUM_USES_SSL"]
         )

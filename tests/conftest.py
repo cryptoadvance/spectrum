@@ -108,7 +108,7 @@ def spectrum_app_with_config(config={}):
         config = tempClass
     app = create_app(config=config)
     try:
-        shutil.rmtree(app.config["DATADIR"], ignore_errors=False)
+        shutil.rmtree(app.config["SPECTRUM_DATADIR"], ignore_errors=False)
     except FileNotFoundError:
         pass
     with app.app_context():

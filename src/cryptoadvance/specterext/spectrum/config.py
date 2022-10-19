@@ -31,7 +31,7 @@ def _get_bool_env_var(varname, default=None):
 class BaseConfig(object):
     """Base configuration. Does not allow e.g. SECRET_KEY, so redefining here"""
     USERNAME='admin'
-    DATADIR="data" # used for sqlite but also for txs-cache
+    SPECTRUM_DATADIR="data" # used for sqlite but also for txs-cache
 
 # Level 1: How does persistence work?
 # Convention: BlaConfig
@@ -42,8 +42,8 @@ class LiteConfig(BaseConfig):
     # the DB is shared between different Extensions.
     # Instead, the tables are all prefixed with "spectrum_"
     # ToDo: separate the other stuff /txs) in a separate directory
-    DATADIR=os.path.join(app.config["SPECTER_DATA_FOLDER"], "sqlite")
-    DATABASE=os.path.abspath(os.path.join(DATADIR, "db.sqlite"))
+    SPECTRUM_DATADIR=os.path.join(app.config["SPECTER_DATA_FOLDER"], "sqlite")
+    DATABASE=os.path.abspath(os.path.join(SPECTRUM_DATADIR, "db.sqlite"))
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 
