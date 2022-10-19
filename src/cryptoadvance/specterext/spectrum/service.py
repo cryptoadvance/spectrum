@@ -47,7 +47,8 @@ class SpectrumService(Service):
 
     def start_spectrum(self):
         ''' initializes the DB and instantiate Spectrum and syncs it '''
-        if not os.path.exists(app.config["SPECTRUM_DATADIR"])
+        if not os.path.exists(app.config["SPECTRUM_DATADIR"]):
+            os.makedirs(app.config["SPECTRUM_DATADIR"])
         logger.info(f"Intitializing Database in {app.config['SQLALCHEMY_DATABASE_URI']}")
         db.init_app(app)
         db.create_all()
