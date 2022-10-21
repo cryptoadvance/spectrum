@@ -1,6 +1,5 @@
 import logging
 from decimal import Decimal
-import simplejson as json # need that to json.dumps decimals
 
 from flask import (
     Blueprint,

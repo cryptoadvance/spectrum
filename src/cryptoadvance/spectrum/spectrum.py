@@ -119,6 +119,10 @@ class Spectrum:
             logger.info(f"Set roothash {self.roothash}")
             self.roothash = get_blockhash(rootheader)
             self.chain = ROOT_HASHES.get(self.roothash, "regtest")
+    
+    def stop(self):
+        logger.info("Stopping Spectrum")
+        del self.sock
 
 
     @property

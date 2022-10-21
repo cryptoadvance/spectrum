@@ -11,6 +11,7 @@ import urllib3
 from cryptoadvance.specter.helpers import is_ip_private
 from cryptoadvance.specter.specter_error import SpecterError, handle_exception
 from cryptoadvance.specter.rpc import BitcoinRPC
+from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
 
 from cryptoadvance.spectrum.spectrum import RPCError, Spectrum
 
@@ -48,6 +49,8 @@ class BridgeRPC(BitcoinRPC):
 
     def multi(self, calls: list, **kwargs):
         """Makes batch request to Core"""
+        if self.spectrum is None:
+            raise BrokenCoreConnectionException
         type(self).counter += len(calls)
         # some debug info for optimizations
         # methods = " ".join(list(dict.fromkeys([call[0] for call in calls])))

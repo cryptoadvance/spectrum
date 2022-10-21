@@ -3,7 +3,7 @@ from cryptoadvance.specter.persistence import BusinessObject
 from cryptoadvance.specterext.spectrum.bridge_rpc import BridgeRPC
 from cryptoadvance.specter.helpers import deep_update
 from cryptoadvance.specter.node import AbstractNode
-from cryptoadvance.spectrum.error import SpectrumException
+from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
 from cryptoadvance.spectrum.spectrum import Spectrum
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ class SpectrumNode(AbstractNode):
     ''' A Node implementation which returns a bridge_rpc class to connect to a spectrum '''
 
     def __init__(self, name = "Spectrum Node", alias = "spectrum_node", spectrum=None):
-        self.spectrum = spectrum
+        self._spectrum = spectrum
         self.name = "Spectrum Node"
         self.alias = "spectrum_node" # used for the file: nodes/spectrum_node.json
         
@@ -52,6 +52,15 @@ class SpectrumNode(AbstractNode):
         return True
 
     @property
+    def spectrum(self):
+        return self._spectrum
+
+    @spectrum.setter
+    def spectrum(self, value):
+        self._spectrum = value
+        self._rpc = BridgeRPC(self.spectrum)
+
+    @property
     def host(self):
         return self.spectrum.host
 
@@ -62,11 +71,8 @@ class SpectrumNode(AbstractNode):
 
     @property
     def rpc(self):
-        if self.spectrum == None:
-            raise SpectrumException("SpectrumNode does not have a spectrum Reference yet")
         if self._rpc is None:
-            logger.info("Creating BridgeRPC ...")
-            self._rpc = BridgeRPC(self._spectrum)
+            self._rpc = BridgeRPC(self.spectrum)
         return self._rpc
 
     def get_rpc(self):

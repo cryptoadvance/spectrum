@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ElectrumSocket:
     def __init__(self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10):
+        logger.info("Initializing ElectrumSocket")
         self._host = host
         self._port = port
         self.running = True
@@ -29,6 +30,7 @@ class ElectrumSocket:
         self._results = {}  # store results of the calls here
         self._requests = []
         self._notifications = []
+        logger.info("Starting ElectrumSocket Threads ...")
         self._recv_thread = threading.Thread(target=self.recv_loop)
         self._recv_thread.daemon = True
         self._recv_thread.start()
@@ -41,6 +43,7 @@ class ElectrumSocket:
         self._notify_thread = threading.Thread(target=self.notify_loop)
         self._notify_thread.daemon = True
         self._notify_thread.start()
+        logger.info("Finished starting ElectrumSocket Threads")
         self._waiting = False
 
     def write_loop(self):
@@ -138,6 +141,7 @@ class ElectrumSocket:
 
 
     def __del__(self):
+        logger.info("Closing socket ...")
         self._socket.close()
 
 
