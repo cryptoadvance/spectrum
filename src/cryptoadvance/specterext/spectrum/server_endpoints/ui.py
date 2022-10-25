@@ -8,6 +8,8 @@ from cryptoadvance.specter.services.controller import user_secret_decrypted_requ
 from cryptoadvance.specter.user import User
 from cryptoadvance.specter.wallet import Wallet
 from cryptoadvance.specter.specter_error import SpecterError
+
+from cryptoadvance.specterext.spectrum.spectrum_node import SpectrumNode
 from ..service import SpectrumService
 
 
@@ -46,33 +48,45 @@ def node_settings(node_alias=None):
 def settings_get():
 
     # Get the user's Wallet objs, sorted by Wallet.name
-    wallet_names = sorted(current_user.wallet_manager.wallets.keys())
-    wallets = [current_user.wallet_manager.wallets[name] for name in wallet_names]
+    electrum_options = app.config["ELECTRUM_OPTIONS"]
+    spectrum_node: SpectrumNode = ext().spectrum_node
+    host = spectrum_node.host
+    port = spectrum_node.port
+    ssl = spectrum_node.ssl
+    elec_chosen_option = "manual"
+    logger.info(f"Searching for {host}")
+    for opt_key, elec in electrum_options.items():
+        if elec["host"] == host and elec["port"] == port and elec["ssl"] == ssl:
+            elec_chosen_option = opt_key
+            print("+++++++MUUUUUUUUUUUUUUUH+++++++++++++++++++++")
 
     return render_template(
         "spectrum/settings.jinja",
-        wallets=wallets,
-        cookies=request.cookies,
+        elec_options=electrum_options,
+        elec_chosen_option=elec_chosen_option,
+        host = host,
+        port = port,
+        ssl = ssl,
     )
 
 @spectrum_endpoint.route("/settings", methods=["POST"])
 @login_required
 def settings_post():
-    show_menu = request.form["show_menu"]
-    host = request.form.get("host")
-    port = request.form.get("port")
-    ssl = request.form.get("ssl")
 
-    user = app.specter.user_manager.get_user()
-    if show_menu == "yes":
-        user.add_service(SpectrumService.id)
-    else:
-        user.remove_service(SpectrumService.id)
-    used_wallet_alias = request.form.get("used_wallet")
-    if used_wallet_alias != None:
-        wallet = current_user.wallet_manager.get_by_alias(used_wallet_alias)
-        SpectrumService.set_associated_wallet(wallet)
-        ext().set_current_user_service_data({"electrum_connection": { "host": host, "port":port, "ssl":ssl}})
+    host = request.form.get('host')
+    port = int(request.form.get('port'))
+    ssl = request.form.get('ssl') == "on"
+    logger.debug(f".................................{ssl}")
+    option_mode = request.form.get('option_mode')
+    electrum_options = app.config["ELECTRUM_OPTIONS"]
+    
+    elec_option = request.form.get('elec_option')
+    if option_mode == "list":
+        host = electrum_options[elec_option]["host"]
+        port = electrum_options[elec_option]["port"]
+        ssl = electrum_options[elec_option]["ssl"]
+
+    ext().update_electrum(host, port, ssl)
     return redirect(url_for(f"{ SpectrumService.get_blueprint_name()}.settings_get"))
 
 @spectrum_endpoint.route("/spectrum_setup", methods=["GET"])
@@ -82,12 +96,4 @@ def spectrum_setup():
     return render_template(
         "spectrum/spectrum_setup.jinja",
     )
-
-# @spectrum_endpoint.route("/about", methods=["POST"])
-# @login_required
-# def about():
-#     return render_template(
-#         "spectrum/to_be_done_about.jinja",
-#         cookies=request.cookies,
-#     )
 

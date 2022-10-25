@@ -51,9 +51,9 @@ def init_app(app, datadir=None, standalone=True):
         app.spectrum = Spectrum(
             app.config["ELECTRUM_HOST"],
             app.config["ELECTRUM_PORT"],
+            ssl=app.config["ELECTRUM_USES_SSL"],
             datadir=app.config["SPECTRUM_DATADIR"],
             app=app,
-            ssl=app.config["ELECTRUM_USES_SSL"]
         )
         app.spectrum.sync()
 

@@ -11,20 +11,58 @@ logger = logging.getLogger(__name__)
 class SpectrumNode(AbstractNode):
     ''' A Node implementation which returns a bridge_rpc class to connect to a spectrum '''
 
-    def __init__(self, name = "Spectrum Node", alias = "spectrum_node", spectrum=None):
+    def __init__(self, name = "Spectrum Node", alias = "spectrum_node", spectrum=None, host=None, port=None, ssl=None):
         self._spectrum = spectrum
         self.name = "Spectrum Node"
         self.alias = "spectrum_node" # used for the file: nodes/spectrum_node.json
+        self._host = host
+        self._port = port
+        self._ssl = ssl
         
         # ToDo: Should not be necessary
         self.external_node = True
         self._rpc = None
+
+    def start_spectrum(self, app, datadir):
+        if self._host is None or self._port is None or self._ssl is None:
+            raise BrokenCoreConnectionException(f"Cannot start spectrum without host ({self._host}), port ({self._port}) or ssl ({self._ssl})")
+        logger.info(f"Creating Spectrum with host {self._host}")
+        try:
+            self.spectrum = Spectrum(
+                self._host,
+                self._port,
+                self._ssl,
+                datadir=datadir,
+                app=app,
+            )
+        except Exception as e:
+            logger.exception(e)
+
+    def stop_spectrum(self):
+        if self.spectrum:
+            self.spectrum.stop()
+            self.spectrum = None
+
+    def update_electrum(self, host, port, ssl, app, datadir):
+        print(f"+++++++++++++++++++++++++{host}")
+        if host is None or port is None or ssl is None:
+            raise Exception(f"Cannot start spectrum without host ({host}), port ({port}) or ssl ({ssl})")
+        logger.info(f"Updating spectrum_node with host {host}")
+        self._host = host
+        self._port = port
+        self._ssl = ssl
+        self.stop_spectrum()
+        self.start_spectrum(app, datadir)
+
 
     @classmethod
     def from_json(cls, node_dict, *args, **kwargs):
         """Create a Node from json"""
         name = node_dict.get("name", "")
         alias = node_dict.get("alias", "")
+        host = node_dict.get("host", None)
+        port = node_dict.get("port", None)
+        ssl = node_dict.get("ssl", None)
 
         return cls(
             name, alias
@@ -37,8 +75,11 @@ class SpectrumNode(AbstractNode):
         return deep_update(
             node_json,
             {
-                "name": self.name,
-                "alias": self.alias,
+                "name":     self.name,
+                "alias":    self.alias,
+                "host":     self.host,
+                "port":     self.port,
+                "ssl":      self.ssl
             },
         )
 
@@ -58,15 +99,28 @@ class SpectrumNode(AbstractNode):
     @spectrum.setter
     def spectrum(self, value):
         self._spectrum = value
-        self._rpc = BridgeRPC(self.spectrum)
+        if self._spectrum is not None:
+            self._rpc = BridgeRPC(self.spectrum)
+        else:
+            self._rpc = None
 
     @property
     def host(self):
-        return self.spectrum.host
+        if self.spectrum:
+            return self.spectrum.host
+        return self._host
 
     @property
     def port(self):
-        return self.spectrum.port
+        if self.spectrum:
+            return self.spectrum.port
+        return self._port
+
+    @property
+    def ssl(self):
+        if self.spectrum:
+            return self.spectrum.ssl
+        return self._ssl
 
 
     @property

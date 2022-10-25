@@ -17,6 +17,9 @@ class ElectrumSocket:
         logger.info("Initializing ElectrumSocket")
         self._host = host
         self._port = port
+        assert type(self._host) == str
+        assert type(self._port) == int
+        assert type(use_ssl) == bool
         self.running = True
         self._callback = callback
         self._timeout = timeout

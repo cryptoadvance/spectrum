@@ -5,6 +5,7 @@ from pathlib import Path
 import datetime
 import secrets
 from flask import current_app as app
+from cryptoadvance.specter.config import _get_bool_env_var
 
 try:
     # Python 2.7
@@ -17,21 +18,28 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-def _get_bool_env_var(varname, default=None):
-    value = os.environ.get(varname, default)
-    if value is None:
-        return False
-    elif isinstance(value, str) and value.strip().lower() == 'false':
-        return False
-    elif bool(value) is False:
-        return False
-    else:
-        return bool(value)
 
 class BaseConfig(object):
     """Base configuration. Does not allow e.g. SECRET_KEY, so redefining here"""
     USERNAME='admin'
     SPECTRUM_DATADIR="data" # used for sqlite but also for txs-cache
+
+    # The prepopulated options
+    ELECTRUM_OPTIONS = {
+        "electrum.emzy.de": {
+            "host": "electrum.emzy.de",
+            "port": 50002,
+            "ssl": True
+        },
+        "electrum.blockstream.info": {
+            "host": "electrum.blockstream.info",
+            "port": 50002,
+            "ssl": True           
+            }
+    }
+
+    # The one which is chosen at startup
+    ELECTRUM_DEFAULT_OPTION = "electrum.emzy.de"
 
 # Level 1: How does persistence work?
 # Convention: BlaConfig

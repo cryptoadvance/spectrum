@@ -54,55 +54,48 @@ class SpectrumService(Service):
         db.init_app(app)
         db.create_all()
         if self.is_spectrum_enabled:
-            self.start_spectrum()
-            self.spectrum_node.spectrum = self.spectrum
+            self.spectrum_node.start_spectrum(app, self.data_folder)
             self.activate_spectrum_node()
-            logger.info("-------------------------")
-            logger.info(f"Activated node: {self.spectrum_node} + {self.spectrum_node.rpc}")
 
     def enable_spectrum(self):
         ''' * starts spectrum 
             * inject it into the node (or create/save the node if not existing)
             * activate this node
         '''
-        self.start_spectrum()
         has_spectrum_node = False
-        if self.is_spectrum_enabled:
-            self.spectrum_node.spectrum = self.spectrum
-        else:
+        if not self.is_spectrum_enabled:
             # No SpectrumNode yet created. Let's do that.
-            spectrum_node = SpectrumNode(spectrum=self.spectrum)
+            default_electrum = app.config["ELECTRUM_DEFAULT_OPTION"]
+            spectrum_node = SpectrumNode(
+                host=app.config["ELECTRUM_OPTIONS"][default_electrum]["host"],
+                port=app.config["ELECTRUM_OPTIONS"][default_electrum]["port"],
+                ssl=app.config["ELECTRUM_OPTIONS"][default_electrum]["ssl"],
+            )
             app.specter.node_manager.nodes[spectrum_node_alias] = spectrum_node
             app.specter.node_manager.save_node(spectrum_node)
+        self.spectrum_node.start_spectrum(app, self.data_folder)
         self.activate_spectrum_node()
 
     def disable_spectrum(self):
-        self.stop_spectrum()
+        self.spectrum_node.stop_spectrum()
         spectrum_node = None
         if self.is_spectrum_enabled:
             app.specter.node_manager.delete_node(self.spectrum_node)
         logger.info("Spectrum disabled")
 
-
-    def start_spectrum(self):
-        ''' instantiate Spectrum and syncs it '''
-        logger.info("Creating Spectrum Object ...")
-        self.spectrum = Spectrum(
-            app.config["ELECTRUM_HOST"],
-            app.config["ELECTRUM_PORT"],
-            datadir=self.data_folder,
-            app=app,
-            ssl=app.config["ELECTRUM_USES_SSL"]
-        )
-        self.spectrum.sync()
+    def update_electrum(self, host, port, ssl):
+        if not self.is_spectrum_enabled:
+            raise Exception("Spectrum is not enabled. Cannot start Electrum")
+        logger.info(f"Updating spectrum_node with host {host}")
+        self.spectrum_node.update_electrum(host, port, ssl, app, self.data_folder)
+        app.specter.node_manager.save_node(self.spectrum_node)
 
     def activate_spectrum_node(self):
+        if not self.is_spectrum_enabled:
+            raise Exception("Spectrum is not enabled. Cannot start Electrum")
         nm: NodeManager = app.specter.node_manager
         nm.switch_node(spectrum_node_alias)
-
-    def stop_spectrum(self):
-        self.spectrum.stop()
-        self.spectrum = None
+        logger.info(f"Activated node: {self.spectrum_node} + {self.spectrum_node.rpc}")
 
     def callback_adjust_view_model(self, view_model: WelcomeVm):
         if view_model.__class__.__name__ == "WelcomeVm":

@@ -86,10 +86,12 @@ class Spectrum:
     roothash = ""  # hash of the 0'th block
     bestblockhash = ""  # hash of the current best block
 
-    def __init__(self, host="127.0.0.1", port=50001, datadir="data", app=None, ssl=False):
+    def __init__(self, host="127.0.0.1", port=50001, ssl=True, datadir="data", app=None):
         self.app = app
         self.host = host
         self.port = port
+        self.ssl = ssl
+        assert type(ssl) == bool, f"ssl is of type {type(ssl)}"
         self.datadir = datadir
         if not os.path.exists(self.txdir):
             logger.info(f"Creating txdir {self.txdir} ")
@@ -308,7 +310,7 @@ class Spectrum:
         method = obj.get("method")
         id = obj.get("id", 0)
         params = obj.get("params", [])
-        logger.info(f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}")
+        logger.debug(f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}")
         try:
             args = None
             kwargs = None
