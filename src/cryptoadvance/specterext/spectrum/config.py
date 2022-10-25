@@ -65,7 +65,7 @@ class EmzyElectrumLiteConfig(LiteConfig):
     ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
     ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
 
-# Level 2: Back to the problem-Space.
+# Level 3: Back to the problem-Space.
 # Convention: ProblemConfig where problem is usually one of Test/Production or so
 
 class TestConfig(NigiriLocalElectrumLiteConfig):
