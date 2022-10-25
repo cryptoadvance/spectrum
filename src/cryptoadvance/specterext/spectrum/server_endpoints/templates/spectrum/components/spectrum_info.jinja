@@ -50,7 +50,7 @@
                     return
                 }
                 if (totalUserBalance==0) {
-                    document.getElementById('total_supply').innerHTML = `Your wallet holds 0 BTC and so, you're effectively a precoiner! Get off zero! `
+                    document.getElementById('total_supply').innerHTML = `Your wallet holds 0 BTC. Get off zero! `
                     return
                 }
                 let userBalanceFromTotal = parseFloat((100 / (result.total_amount / totalUserBalance)).toFixed(8));
