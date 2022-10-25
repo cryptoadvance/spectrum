@@ -52,10 +52,6 @@ class BridgeRPC(BitcoinRPC):
         if self.spectrum is None:
             raise BrokenCoreConnectionException
         type(self).counter += len(calls)
-        # some debug info for optimizations
-        # methods = " ".join(list(dict.fromkeys([call[0] for call in calls])))
-        # wallet = self.path.split("/")[-1]
-        # print(f"{self.counter}: +{len(calls)} {wallet} {methods}")
         headers = {"content-type": "application/json"}
         payload = [
             {
@@ -73,10 +69,6 @@ class BridgeRPC(BitcoinRPC):
         if kwargs.get("no_wait"):
             # Zero is treated like None, i.e. infinite wait
             timeout = 0.001
-
-        url = self.url
-        if "wallet" in kwargs:
-            url = url + "/wallet/{}".format(kwargs["wallet"])
         return [ self.spectrum.jsonrpc(item,wallet_name=self.wallet_name) for item in payload ]
 
     def __repr__(self) -> str:

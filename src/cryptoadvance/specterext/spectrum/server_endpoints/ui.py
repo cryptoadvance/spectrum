@@ -54,11 +54,9 @@ def settings_get():
     port = spectrum_node.port
     ssl = spectrum_node.ssl
     elec_chosen_option = "manual"
-    logger.info(f"Searching for {host}")
     for opt_key, elec in electrum_options.items():
         if elec["host"] == host and elec["port"] == port and elec["ssl"] == ssl:
             elec_chosen_option = opt_key
-            print("+++++++MUUUUUUUUUUUUUUUH+++++++++++++++++++++")
 
     return render_template(
         "spectrum/settings.jinja",

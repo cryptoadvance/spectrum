@@ -26,7 +26,6 @@ class SpectrumNode(AbstractNode):
     def start_spectrum(self, app, datadir):
         if self._host is None or self._port is None or self._ssl is None:
             raise BrokenCoreConnectionException(f"Cannot start spectrum without host ({self._host}), port ({self._port}) or ssl ({self._ssl})")
-        logger.info(f"Creating Spectrum with host {self._host}")
         try:
             self.spectrum = Spectrum(
                 self._host,
@@ -44,10 +43,8 @@ class SpectrumNode(AbstractNode):
             self.spectrum = None
 
     def update_electrum(self, host, port, ssl, app, datadir):
-        print(f"+++++++++++++++++++++++++{host}")
         if host is None or port is None or ssl is None:
-            raise Exception(f"Cannot start spectrum without host ({host}), port ({port}) or ssl ({ssl})")
-        logger.info(f"Updating spectrum_node with host {host}")
+            raise BrokenCoreConnectionException(f"Cannot start spectrum without host ({host}), port ({port}) or ssl ({ssl})")
         self._host = host
         self._port = port
         self._ssl = ssl

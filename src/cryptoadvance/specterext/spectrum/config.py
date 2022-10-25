@@ -14,8 +14,6 @@ except ImportError:
     # Python 3
     import configparser
 
-# BASEDIR = os.path.abspath(os.path.dirname(__file__))
-
 logger = logging.getLogger(__name__)
 
 

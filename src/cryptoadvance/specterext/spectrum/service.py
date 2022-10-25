@@ -86,7 +86,7 @@ class SpectrumService(Service):
     def update_electrum(self, host, port, ssl):
         if not self.is_spectrum_enabled:
             raise Exception("Spectrum is not enabled. Cannot start Electrum")
-        logger.info(f"Updating spectrum_node with host {host}")
+        logger.info(f"Updating spectrum_node with {host}:{port} (ssl: {ssl})")
         self.spectrum_node.update_electrum(host, port, ssl, app, self.data_folder)
         app.specter.node_manager.save_node(self.spectrum_node)
 
@@ -95,7 +95,7 @@ class SpectrumService(Service):
             raise Exception("Spectrum is not enabled. Cannot start Electrum")
         nm: NodeManager = app.specter.node_manager
         nm.switch_node(spectrum_node_alias)
-        logger.info(f"Activated node: {self.spectrum_node} + {self.spectrum_node.rpc}")
+        logger.info(f"Activated node {self.spectrum_node} with rpc {self.spectrum_node.rpc}")
 
     def callback_adjust_view_model(self, view_model: WelcomeVm):
         if view_model.__class__.__name__ == "WelcomeVm":

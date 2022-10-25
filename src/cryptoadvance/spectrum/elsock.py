@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ElectrumSocket:
     def __init__(self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10):
-        logger.info("Initializing ElectrumSocket")
+        logger.info(f"Initializing ElectrumSocket with {host}:{port} (ssl: {ssl})")
         self._host = host
         self._port = port
         assert type(self._host) == str
@@ -25,7 +25,6 @@ class ElectrumSocket:
         self._timeout = timeout
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if use_ssl:
-            logger.info(f"Using ssl while connecting to {self._socket}")
             self._socket = ssl.wrap_socket(self._socket)
         self._socket.settimeout(5)
         self._socket.connect((host, port))
@@ -112,7 +111,7 @@ class ElectrumSocket:
                 logger.error("Error in callback:", e)
                 handle_exception(e)
         else:
-            logger.info("Notification:", data)
+            logger.debug("Notification:", data)
 
     def call(self, method, params=[]):
         uid = random.randint(0, 1 << 32)
@@ -148,17 +147,3 @@ class ElectrumSocket:
         self._socket.close()
 
 
-def main():
-    es = ElectrumSocket()
-    res = es.call("blockchain.headers.subscribe")
-    print(res)
-    es.wait()  # wait for any notification
-    res = es.ping()
-    print(res)
-    while True:
-        time.sleep(1)
-    sys.exit(0)
-
-
-if __name__ == "__main__":
-    main()
