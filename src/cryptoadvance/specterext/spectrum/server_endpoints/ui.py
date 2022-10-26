@@ -72,9 +72,11 @@ def settings_get():
 def settings_post():
 
     host = request.form.get('host')
-    port = int(request.form.get('port'))
+    try:
+        port = int(request.form.get('port'))
+    except ValueError:
+        port = 0
     ssl = request.form.get('ssl') == "on"
-    logger.debug(f".................................{ssl}")
     option_mode = request.form.get('option_mode')
     electrum_options = app.config["ELECTRUM_OPTIONS"]
     

@@ -1,6 +1,11 @@
 <h1>{{ _("Spectrum Info") }}:</h1>
 {% if specter.chain %}
 
+    <p class="warning" id="type_reminder">
+        <img src="{{ url_for('static', filename='img/info_sign.svg') }}" style="width: 20px;"/><br>
+        {{ _("Connecting to public electrum servers may expose some information including your ip address and transaction history.") }}
+    </p>
+    
     <table>
         <tr> <td style="text-align: left;">{{ _("Host") }}:</td> <td style="text-align: right;" id="node-info-specter-chain">{{specter.node.host}}</td> </tr>
         <tr> <td style="text-align: left;">{{ _("Port") }}:</td> <td style="text-align: right;" id="node-info-specter-chain">{{specter.node.port}}</td> </tr>
@@ -15,6 +20,7 @@
             <tr> <td style="text-align: left;">{{ _("Prune target size") }}:</td> <td style="text-align: right;">{{specter.info['prune_target_size']}}</td> </tr>
         {% endif %}
     </table>
+
 
     <p id="total_supply" style="line-height: 2.5;"></p>
     <div class="row">
@@ -50,7 +56,7 @@
                     return
                 }
                 if (totalUserBalance==0) {
-                    document.getElementById('total_supply').innerHTML = `Your wallet holds 0 BTC. Get off zero! `
+                    document.getElementById('total_supply').innerHTML = `{{ _("Your wallet holds 0 BTC. Get off zero!)") }} `
                     return
                 }
                 let userBalanceFromTotal = parseFloat((100 / (result.total_amount / totalUserBalance)).toFixed(8));

@@ -1,33 +1,14 @@
 ''' A config module contains static configuration '''
+import configparser
+import datetime
 import logging
 import os
-from pathlib import Path
-import datetime
 import secrets
+from pathlib import Path
 
-try:
-    # Python 2.7
-    import ConfigParser as configparser
-except ImportError:
-    # Python 3
-    import configparser
-
-# BASEDIR = os.path.abspath(os.path.dirname(__file__))
+from cryptoadvance.specter.config import _get_bool_env_var
 
 logger = logging.getLogger(__name__)
-
-# ToDo: Avoid double config
-
-def _get_bool_env_var(varname, default=None):
-    value = os.environ.get(varname, default)
-    if value is None:
-        return False
-    elif isinstance(value, str) and value.strip().lower() == 'false':
-        return False
-    elif bool(value) is False:
-        return False
-    else:
-        return bool(value)
 
 class BaseConfig(object):
     """Base configuration."""
