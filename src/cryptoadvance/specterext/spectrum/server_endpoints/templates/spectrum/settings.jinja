@@ -42,14 +42,14 @@
             
             <div id = "elec_manual_container" style="display: none">
                 <div style="margin-top: 10px">
-                    Host:<br><input type="text" id="host" name="host" type="text" value="">
+                    Host:<br><input type="text" id="host" name="host" type="text" value="{{ host }}">
                 </div>
                 <div style="margin-top: 10px">
-                    Port:<br><input type="text" id="port" name="port" type="text" value="">
+                    Port:<br><input type="text" id="port" name="port" type="text" value="{{ port }}">
                 </div>
                 <label style="font-size: 1em;">{{ _("Use ssl:") }}&nbsp;</label>
                 <label class="switch">
-                    <input type="checkbox" name="ssl" style="margin: auto;">
+                    <input type="checkbox" name="ssl" style="margin: auto;" {% if ssl %}checked{% endif %}>
                     <span class="slider"></span>
                 </label>
         

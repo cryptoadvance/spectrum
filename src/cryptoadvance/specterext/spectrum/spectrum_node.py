@@ -55,6 +55,7 @@ class SpectrumNode(AbstractNode):
     @classmethod
     def from_json(cls, node_dict, *args, **kwargs):
         """Create a Node from json"""
+        logger.debug(f"Instantiating spectrum_node with node_dict {node_dict} args ({args}) and kwargs {kwargs}")
         name = node_dict.get("name", "")
         alias = node_dict.get("alias", "")
         host = node_dict.get("host", None)
@@ -62,7 +63,7 @@ class SpectrumNode(AbstractNode):
         ssl = node_dict.get("ssl", None)
 
         return cls(
-            name, alias
+            name, alias, host=host, port=port, ssl=ssl
         )
 
     @property

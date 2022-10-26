@@ -11,6 +11,7 @@ from flask_apscheduler import APScheduler
 from cryptoadvance.specterext.spectrum.spectrum_node import SpectrumNode
 from cryptoadvance.spectrum.server import init_app, Spectrum
 from cryptoadvance.spectrum.db import db
+from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
 from cryptoadvance.specter.server_endpoints.welcome.welcome_vm import WelcomeVm
 
 logger = logging.getLogger(__name__)
@@ -54,8 +55,12 @@ class SpectrumService(Service):
         db.init_app(app)
         db.create_all()
         if self.is_spectrum_enabled:
-            self.spectrum_node.start_spectrum(app, self.data_folder)
-            self.activate_spectrum_node()
+            try:
+                self.spectrum_node.start_spectrum(app, self.data_folder)
+                self.activate_spectrum_node()
+            except BrokenCoreConnectionException as e:
+                logger.error(e)
+            
 
     def enable_spectrum(self):
         ''' * starts spectrum 
