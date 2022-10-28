@@ -3,7 +3,7 @@ import pytest
 from cryptoadvance.specterext.spectrum.spectrum_node import SpectrumNode
 from cryptoadvance.spectrum.util import SpectrumException
 from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
-from cryptoadvance.specter.persistence import BusinessObject
+from cryptoadvance.specter.persistence import PersistentObject
 
 def test_SpectrumNode(caplog):
     caplog.set_level(logging.DEBUG)
@@ -31,8 +31,8 @@ def test_SpectrumNode(caplog):
         "ssl": True
     }
 
-    # Instantiate via BusinessObject:
-    sn = BusinessObject.from_json(a_dict)
+    # Instantiate via PersistentObject:
+    sn = PersistentObject.from_json(a_dict)
     
     assert type(sn) == SpectrumNode
     assert sn.host == "kirsche.emzy.de"

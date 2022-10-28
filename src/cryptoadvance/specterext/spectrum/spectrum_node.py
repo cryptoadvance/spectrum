@@ -1,5 +1,4 @@
 import logging
-from cryptoadvance.specter.persistence import BusinessObject
 from cryptoadvance.specterext.spectrum.bridge_rpc import BridgeRPC
 from cryptoadvance.specter.helpers import deep_update
 from cryptoadvance.specter.node import AbstractNode
