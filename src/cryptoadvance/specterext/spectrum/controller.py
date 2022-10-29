@@ -10,7 +10,7 @@ from cryptoadvance.specter.wallet import Wallet
 from cryptoadvance.specter.specter_error import SpecterError
 
 from cryptoadvance.specterext.spectrum.spectrum_node import SpectrumNode
-from ..service import SpectrumService
+from .service import SpectrumService
 
 
 logger = logging.getLogger(__name__)

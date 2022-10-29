@@ -25,9 +25,7 @@ class SpectrumService(Service):
     logo = "spectrum/img/logo.svg"
     desc = "An electrum hidden behind a core API"
     has_blueprint = True
-    blueprint_modules = { 
-        "default":  "cryptoadvance.specterext.spectrum.server_endpoints.ui"
-    }
+    blueprint_module = "cryptoadvance.specterext.spectrum.controller"
     devstatus = devstatus_alpha
     isolated_client = False
 
@@ -49,6 +47,12 @@ class SpectrumService(Service):
 
 
     def callback_after_serverpy_init_app(self, scheduler: APScheduler):
+        # See comments in config.py which would be the natural place to define SPECTRUM_DATADIR
+        # but we want to avoid RuntimeError: Working outside of application context.
+        app.config["SPECTRUM_DATADIR"] = os.path.join(app.config["SPECTER_DATA_FOLDER"], "sqlite")
+        app.config["DATABASE"] =os.path.abspath(os.path.join(app.config["SPECTRUM_DATADIR"], "db.sqlite"))
+        app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///' + app.config["DATABASE"]
+
         if not os.path.exists(app.config["SPECTRUM_DATADIR"]):
             os.makedirs(app.config["SPECTRUM_DATADIR"])
         logger.info(f"Intitializing Database in {app.config['SQLALCHEMY_DATABASE_URI']}")

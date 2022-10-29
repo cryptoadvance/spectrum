@@ -48,9 +48,12 @@ class LiteConfig(BaseConfig):
     # the DB is shared between different Extensions.
     # Instead, the tables are all prefixed with "spectrum_"
     # ToDo: separate the other stuff /txs) in a separate directory
-    SPECTRUM_DATADIR=os.path.join(app.config["SPECTER_DATA_FOLDER"], "sqlite")
-    DATABASE=os.path.abspath(os.path.join(SPECTRUM_DATADIR, "db.sqlite"))
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
+
+    # SPECTRUM_DATADIR cannot specified here as the app.config would throw a RuntimeError: Working outside of application context.
+    # So this key need to be defined in service.callback_after_serverpy_init_app
+    #SPECTRUM_DATADIR=os.path.join(app.config["SPECTER_DATA_FOLDER"], "sqlite")
+    #DATABASE=os.path.abspath(os.path.join(SPECTRUM_DATADIR, "db.sqlite"))
+    #SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 
 # Level 2: Where do we get an electrum from ?
@@ -74,6 +77,10 @@ class TestConfig(NigiriLocalElectrumLiteConfig):
 class DevelopmentConfig(EmzyElectrumLiteConfig):
     pass
 
+class Development2Config(EmzyElectrumLiteConfig):
+    ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='kirsche.emzy.de')
+    ELECTRUM_PORT=int(os.environ.get('ELECTRUM_PORT', default='50002'))
+    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="true")
 class ProductionConfig(EmzyElectrumLiteConfig):
     ''' Not sure whether we're production ready, though '''
     pass
