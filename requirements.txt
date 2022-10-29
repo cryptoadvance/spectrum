@@ -1,6 +1,6 @@
 embit==0.5.0
 flask
-Flask-SQLAlchemy
+Flask-SQLAlchemy==2.5.1
 requests
 psycopg2-binary
 pytest

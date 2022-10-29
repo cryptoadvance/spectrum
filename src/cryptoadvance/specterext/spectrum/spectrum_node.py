@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 class SpectrumNode(AbstractNode):
     ''' A Node implementation which returns a bridge_rpc class to connect to a spectrum '''
+    external_node=True
 
     def __init__(self, name = "Spectrum Node", alias = "spectrum_node", spectrum=None, host=None, port=None, ssl=None):
         self._spectrum = spectrum
@@ -19,7 +20,6 @@ class SpectrumNode(AbstractNode):
         self._ssl = ssl
         
         # ToDo: Should not be necessary
-        self.external_node = True
         self._rpc = None
 
     def start_spectrum(self, app, datadir):
