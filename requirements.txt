@@ -4,4 +4,3 @@ Flask-SQLAlchemy==2.5.1
 requests
 psycopg2-binary
 pytest
-simplejson
