@@ -61,7 +61,6 @@ class SpectrumNode(AbstractNode):
     @classmethod
     def from_json(cls, node_dict, *args, **kwargs):
         """Create a Node from json"""
-        logger.debug(f"Instantiating spectrum_node with node_dict {node_dict} args ({args}) and kwargs {kwargs}")
         name = node_dict.get("name", "")
         alias = node_dict.get("alias", "")
         host = node_dict.get("host", None)
@@ -87,6 +86,9 @@ class SpectrumNode(AbstractNode):
             },
         )
 
+    @property
+    def is_running(self):
+        return self.spectrum.is_connected()
 
     def check_blockheight(self):
         ''' This naive implementation always returns True: Claiming that new blocks have arrived, we're forcing 
@@ -145,3 +147,9 @@ class SpectrumNode(AbstractNode):
 
     def node_info_template(self):
         return "spectrum/components/spectrum_info.jinja"
+
+    def node_logo_template(self):
+        return "spectrum/components/spectrum_node_logo.jinja"
+
+    def node_connection_template(self):
+        return "spectrum/components/spectrum_node_connection.jinja"

@@ -126,6 +126,9 @@ class Spectrum:
         logger.info("Stopping Spectrum")
         del self.sock
 
+    def is_connected(self):
+        return self.sock is not None
+
 
     @property
     def txdir(self):
@@ -1092,6 +1095,9 @@ class Spectrum:
         return {"psbt": res, "complete": complete}
 
     # ========== INTERNAL METHODS ==========
+
+    def __repr__(self) -> str:
+        return f"<Spectrum host={self.host} port={self.port} ssl={self.ssl}>"
 
     def set_seed(self, wallet, seed=None):
         if seed is None:
