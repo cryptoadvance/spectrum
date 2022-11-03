@@ -68,7 +68,7 @@ def test_getblockhash(caplog, client):
     assert result.status_code == 200
     print(json.loads(result.data))
     
-    assert json.loads(result.data)["result"] == ''
+    assert json.loads(result.data)["result"] == '0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206' # Hash of hard coded regtest genesis block
 
 def test_rescanblockchain(caplog, client):
     caplog.set_level(logging.DEBUG)

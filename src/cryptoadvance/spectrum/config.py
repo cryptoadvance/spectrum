@@ -42,7 +42,7 @@ class PostgresConfig(BaseConfig):
 class NigiriLocalElectrumLiteConfig(LiteConfig):
     ELECTRUM_HOST="127.0.0.1"
     ELECTRUM_PORT=50000
-    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false")
+    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false") # Nigiri doesn't use SSL
 
 class EmzyElectrumLiteConfig(LiteConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')

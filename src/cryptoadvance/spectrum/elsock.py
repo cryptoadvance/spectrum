@@ -84,11 +84,14 @@ class ElectrumSocket:
 
     def recv(self):
         while self.running:
-
             data = self._socket.recv(2048)
-            while not data.endswith(b"\n"):
+            while not data.endswith(b"\n"): # b"\n" is the end of the message
                 data += self._socket.recv(2048)
+            # data looks like this:
+            # b'{"jsonrpc": "2.0", "result": {"hex": "...", "height": 761086}, "id": 2210736436}\n'
             arr = [json.loads(d.decode()) for d in data.strip().split(b"\n") if d]
+            # arr looks like this
+            # [{'jsonrpc': '2.0', 'result': {'hex': '...', 'height': 761086}, 'id': 2210736436}]
             for response in arr:
                 if "method" in response:  # notification
                     self._notifications.append(response)
