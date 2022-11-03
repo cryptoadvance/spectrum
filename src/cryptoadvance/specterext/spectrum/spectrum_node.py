@@ -22,6 +22,13 @@ class SpectrumNode(AbstractNode):
         # ToDo: Should not be necessary
         self._rpc = None
 
+    @property
+    def datadir(self):
+        ''' Spectrum doesn't need or have a datadirectory but the deletion-process is demanding to have one
+            "" is a magic-value which prevents stupid things to happen until we have refactored that process
+        '''
+        return ""
+
     def start_spectrum(self, app, datadir):
         if self._host is None or self._port is None or self._ssl is None:
             raise BrokenCoreConnectionException(f"Cannot start spectrum without host ({self._host}), port ({self._port}) or ssl ({self._ssl})")
