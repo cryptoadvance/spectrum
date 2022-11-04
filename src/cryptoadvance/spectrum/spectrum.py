@@ -140,12 +140,16 @@ class Spectrum:
             return
         else:
             logger.info(f"Syncing ... {self.sock}")
+        subscription_logging_counter = 0
         # subscribe to all scripts
         for sc in Script.query.all():
             # ignore external scripts (labeled recepients)
             if sc.index is None:
                 continue
-            logger.info(f"subscribe to scripthash {sc.scripthash}")
+            subscription_logging_counter += 1
+            if subscription_logging_counter % 100 == 0:
+                logger.info(f"Now subscribed to {subscription_logging_counter} scripthashes")
+
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
