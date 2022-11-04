@@ -1,7 +1,6 @@
 embit==0.5.0
-flask
-Flask-SQLAlchemy
-requests
+Flask==2.1.1
+Flask-SQLAlchemy==2.5.1
 psycopg2-binary
+requests==2.26.0
 pytest
-simplejson

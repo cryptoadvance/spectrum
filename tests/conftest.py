@@ -25,7 +25,7 @@ from fix_infrastructure import MockServer
 logger = logging.getLogger(__name__)
 
 pytest_plugins = [
-    "fix_infrastructure",
+    #"fix_infrastructure",
     "fix_keys_and_seeds"
 ]
 
@@ -83,6 +83,12 @@ def pytest_addoption(parser):
     )
     listen()
 
+@pytest.fixture
+def empty_data_folder():
+    # Make sure that this folder never ever gets a reasonable non-testing use-case
+    with tempfile.TemporaryDirectory(prefix="specter_home_tmp_") as data_folder:
+        yield data_folder
+
 def spectrum_app_with_config(config={}):
     """helper-function to create SpectrumFlasks"""
     setup_logging(debug=True)
@@ -101,10 +107,14 @@ def spectrum_app_with_config(config={}):
         assert getattr(sys.modules[__name__], "tempClass") == tempClass
         config = tempClass
     app = create_app(config=config)
-    init_app(app)
+    try:
+        shutil.rmtree(app.config["SPECTRUM_DATADIR"], ignore_errors=False)
+    except FileNotFoundError:
+        pass
     with app.app_context():
         app.config["TESTING"] = True
         app.testing = True
+        init_app(app, standalone=True)
         return app
 
 @pytest.fixture
@@ -145,8 +155,3 @@ def client(app):
     """a test_client from an initialized Flask-App"""
     return app.test_client()
 
-@pytest.fixture
-def empty_data_folder():
-    # Make sure that this folder never ever gets a reasonable non-testing use-case
-    with tempfile.TemporaryDirectory(prefix="specter_home_tmp_") as data_folder:
-        yield data_folder

@@ -1,0 +1,15 @@
+{% extends "base.jinja" %}
+{% block main %}
+    <br><br>
+    <div class="card">
+        <h1>{{ _("Spectrum - Connecting Specter to Electrum") }}</h1>
+        <br>
+        
+        <div class="note">
+            <img style="width: 100px;" src="{{ url_for('static', filename='img/party.png') }}"/><br><br>
+            {{ _("Congratulations, Specter is now connected via Spectrum to an Electrum Server!") }}
+            <br><br/>
+        </div>
+        <br/>
+    </div>
+{% endblock %}

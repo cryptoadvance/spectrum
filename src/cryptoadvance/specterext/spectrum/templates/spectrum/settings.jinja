@@ -1,0 +1,127 @@
+{% extends "spectrum/components/spectrum_tab.jinja" %}
+
+
+
+
+
+{% block title %}Settings{% endblock %}
+{% set tab = 'settings_get' %}
+{% block content %}
+    <br/>
+      <div class="card">
+        <h1>{{ _("Configure Spectrum") }}</h1>
+        <br>
+
+        <div class="note">
+            {{ _("- Maybe you want to put some notes for the user") }}<br/>
+            {{ _("- One important setting is whether your extension gets a menu-point on the left") }}<br/>
+            {{ _("- Let us assume you want the user to use a specific wallet. That should go here. ") }}<br/>
+        </div>
+        <br/>
+
+        <form action="{{ url_for(service.get_blueprint_name() + '.settings_post') }}" method="POST" role="form">
+            <input type="hidden" class="csrf-token" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div>Show Menu Item:</div>
+            <select name="show_menu">
+                <option value="yes"   {% if show_menu == 'yes' %}selected{% endif %}>Yes</option>
+                <option value="no"    {% if show_menu == 'no'  %}selected{% endif %}>No</option>
+            </select>
+            <br/>
+            <br/>
+            <br/>
+
+            <br>
+            <div>
+                {{ _("Electrum Server:") }} 
+                <label><input type="radio" class="inline" style="margin: 0 10px 0 20px;" id="elec_option_list" name="option_mode" value="list" >{{ _("list") }}</label>
+                <label><input type="radio" class="inline" style="margin: 0 10px 0 20px"  id="elec_option_manual" name="option_mode" value="manual" >{{ _("manual") }}</label>
+            </div>
+            <br>
+        
+            
+            <div id = "elec_manual_container" style="display: none">
+                <div style="margin-top: 10px">
+                    Host:<br><input type="text" id="host" name="host" type="text" value="{{ host }}">
+                </div>
+                <div style="margin-top: 10px">
+                    Port:<br><input type="text" id="port" name="port" type="text" value="{{ port }}">
+                </div>
+                <label style="font-size: 1em;">{{ _("Use ssl:") }}&nbsp;</label>
+                <label class="switch">
+                    <input type="checkbox" name="ssl" style="margin: auto;" {% if ssl %}checked{% endif %}>
+                    <span class="slider"></span>
+                </label>
+        
+                
+            </div>
+        
+            <div id ="elec_list_container" style="display: none">    
+                <select name="elec_option">
+                    {% for electrum_option in elec_options %}
+                        <option name="{{ electrum_option }}" {% if elec_chosen_option == electrum_option %}selected{% endif %}>{{ electrum_option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <br><br><br>
+
+            <div class="row">
+                <button type="submit" class="btn">{{ _("Save") }}</button>
+            </div>
+
+        </form>
+    </div>
+    <br/>
+    <br/>
+    <br/>
+{% endblock %}
+
+{% block scripts %}
+
+  <script>
+    this.elecOptionList = document.getElementById("elec_option_list")
+    this.elecOptionManual = document.getElementById("elec_option_manual")
+
+    this.elecManualContainer = document.getElementById("elec_manual_container")
+    this.elecListContainer = document.getElementById("elec_list_container")
+
+    function showElecOption(option) {
+        if (option == 'list') {
+            this.elecOptionList.checked = true
+            this.elecManualContainer.style.display ='none'
+            this.elecListContainer.style.display = 'block'
+        } else {
+            this.elecOptionManual.checked = true
+            this.elecManualContainer.style.display ='block'
+            this.elecListContainer.style.display = 'none'
+        }
+    }
+    {% if elec_chosen_option == "manual" %}
+    showElecOption("manual")
+    {% else %}
+    showElecOption("list")
+    {% endif %}
+
+    // The radio-button for manual
+    elec_option_manual =  document.getElementById("elec_option_manual")
+    elec_option_manual.addEventListener('click', (event) => {
+        this.showElecOption("manual")
+    });
+    
+    // The radio-button for dynamic
+    this.elec_option_list =  document.getElementById("elec_option_list")
+    this.elec_option_list.addEventListener('click', (event) => {
+        this.showElecOption("list")
+    });
+
+
+
+    this.elecManualHost = document.getElementById("host")
+    this.elecManualHost.addEventListener('oninput', (event) => {
+        this.updateLighterDom()
+    });
+
+
+  </script>
+{% endblock %}

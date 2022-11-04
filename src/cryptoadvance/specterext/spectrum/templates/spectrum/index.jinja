@@ -1,0 +1,18 @@
+{% extends "spectrum/components/spectrum_tab.jinja" %}
+{% block title %}Settings{% endblock %}
+{% set tab = 'index' %}
+{% block content %}
+    <br><br>
+    <div class="card">
+        <h1>{{ _("Spectrum - Connecting Specter to Electrum") }}</h1>
+        <br>
+
+        <div class="note">
+            {{ _("- Spectrum lets you connect Specter to Electrum") }}<br/>
+            {{ _("- You can connect Specter to your own Electrum Server or public servers") }}<br/>
+            {{ _("- By default, Spectrum connects to Emzy's Electrum Server and is not yet configurable ") }}<br/>
+        </div>
+        <br/>
+    </div>
+{% endblock %}
+

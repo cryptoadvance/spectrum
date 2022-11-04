@@ -86,10 +86,12 @@ class Spectrum:
     roothash = ""  # hash of the 0'th block
     bestblockhash = ""  # hash of the current best block
 
-    def __init__(self, host="127.0.0.1", port=50001, datadir="data", app=None, ssl=False):
+    def __init__(self, host="127.0.0.1", port=50001, ssl=True, datadir="data", app=None):
         self.app = app
         self.host = host
         self.port = port
+        self.ssl = ssl
+        assert type(ssl) == bool, f"ssl is of type {type(ssl)}"
         self.datadir = datadir
         if not os.path.exists(self.txdir):
             logger.info(f"Creating txdir {self.txdir} ")
@@ -119,6 +121,13 @@ class Spectrum:
             logger.info(f"Set roothash {self.roothash}")
             self.roothash = get_blockhash(rootheader)
             self.chain = ROOT_HASHES.get(self.roothash, "regtest")
+    
+    def stop(self):
+        logger.info("Stopping Spectrum")
+        del self.sock
+
+    def is_connected(self):
+        return self.sock is not None
 
 
     @property
@@ -131,12 +140,16 @@ class Spectrum:
             return
         else:
             logger.info(f"Syncing ... {self.sock}")
+        subscription_logging_counter = 0
         # subscribe to all scripts
         for sc in Script.query.all():
             # ignore external scripts (labeled recepients)
             if sc.index is None:
                 continue
-            logger.info(f"subscribe to scripthash {sc.scripthash}")
+            subscription_logging_counter += 1
+            if subscription_logging_counter % 100 == 0:
+                logger.info(f"Now subscribed to {subscription_logging_counter} scripthashes")
+
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
@@ -304,7 +317,7 @@ class Spectrum:
         method = obj.get("method")
         id = obj.get("id", 0)
         params = obj.get("params", [])
-        logger.info(f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}")
+        logger.debug(f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}")
         try:
             args = None
             kwargs = None
@@ -762,8 +775,8 @@ class Spectrum:
     def getbalances(self, wallet):
         confirmed, unconfirmed = self._get_balance(wallet)
         b = {
-            "trusted": round(confirmed * Decimal(1e-8), 8),
-            "untrusted_pending": round(unconfirmed * Decimal(1e-8), 8),
+            "trusted": round(confirmed * 1e-8, 8),
+            "untrusted_pending": round(unconfirmed * 1e-8, 8),
             "immature": 0.0,
         }
         if wallet.private_keys_enabled:
@@ -1086,6 +1099,9 @@ class Spectrum:
         return {"psbt": res, "complete": complete}
 
     # ========== INTERNAL METHODS ==========
+
+    def __repr__(self) -> str:
+        return f"<Spectrum host={self.host} port={self.port} ssl={self.ssl}>"
 
     def set_seed(self, wallet, seed=None):
         if seed is None:

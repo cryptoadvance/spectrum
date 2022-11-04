@@ -14,14 +14,17 @@ logger = logging.getLogger(__name__)
 
 class ElectrumSocket:
     def __init__(self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10):
+        logger.info(f"Initializing ElectrumSocket with {host}:{port} (ssl: {ssl})")
         self._host = host
         self._port = port
+        assert type(self._host) == str
+        assert type(self._port) == int
+        assert type(use_ssl) == bool
         self.running = True
         self._callback = callback
         self._timeout = timeout
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if use_ssl:
-            logger.info(f"Using ssl while connecting to {self._socket}")
             self._socket = ssl.wrap_socket(self._socket)
         self._socket.settimeout(5)
         self._socket.connect((host, port))
@@ -29,6 +32,7 @@ class ElectrumSocket:
         self._results = {}  # store results of the calls here
         self._requests = []
         self._notifications = []
+        logger.info("Starting ElectrumSocket Threads ...")
         self._recv_thread = threading.Thread(target=self.recv_loop)
         self._recv_thread.daemon = True
         self._recv_thread.start()
@@ -41,6 +45,7 @@ class ElectrumSocket:
         self._notify_thread = threading.Thread(target=self.notify_loop)
         self._notify_thread.daemon = True
         self._notify_thread.start()
+        logger.info("Finished starting ElectrumSocket Threads")
         self._waiting = False
 
     def write_loop(self):
@@ -79,11 +84,14 @@ class ElectrumSocket:
 
     def recv(self):
         while self.running:
-
             data = self._socket.recv(2048)
-            while not data.endswith(b"\n"):
+            while not data.endswith(b"\n"): # b"\n" is the end of the message
                 data += self._socket.recv(2048)
+            # data looks like this:
+            # b'{"jsonrpc": "2.0", "result": {"hex": "...", "height": 761086}, "id": 2210736436}\n'
             arr = [json.loads(d.decode()) for d in data.strip().split(b"\n") if d]
+            # arr looks like this
+            # [{'jsonrpc': '2.0', 'result': {'hex': '...', 'height': 761086}, 'id': 2210736436}]
             for response in arr:
                 if "method" in response:  # notification
                     self._notifications.append(response)
@@ -106,7 +114,7 @@ class ElectrumSocket:
                 logger.error("Error in callback:", e)
                 handle_exception(e)
         else:
-            logger.info("Notification:", data)
+            logger.debug("Notification:", data)
 
     def call(self, method, params=[]):
         uid = random.randint(0, 1 << 32)
@@ -138,20 +146,7 @@ class ElectrumSocket:
 
 
     def __del__(self):
+        logger.info("Closing socket ...")
         self._socket.close()
 
 
-def main():
-    es = ElectrumSocket()
-    res = es.call("blockchain.headers.subscribe")
-    print(res)
-    es.wait()  # wait for any notification
-    res = es.ping()
-    print(res)
-    while True:
-        time.sleep(1)
-    sys.exit(0)
-
-
-if __name__ == "__main__":
-    main()
