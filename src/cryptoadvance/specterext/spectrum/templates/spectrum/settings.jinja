@@ -10,41 +10,29 @@
     <br/>
       <div class="card">
         <h1>{{ _("Configure Spectrum") }}</h1>
-        <br>
-
         <div class="note">
-            {{ _("- Maybe you want to put some notes for the user") }}<br/>
-            {{ _("- One important setting is whether your extension gets a menu-point on the left") }}<br/>
-            {{ _("- Let us assume you want the user to use a specific wallet. That should go here. ") }}<br/>
+            {{ _("- Here you can choose from a list of Electrum servers or configure the connection to your own server.") }}<br/>
+            {{ _("- Connecting to a third-party without using Tor leaks private information. Be aware of that.") }}<br/>
         </div>
-        <br/>
-
         <form action="{{ url_for(service.get_blueprint_name() + '.settings_post') }}" method="POST" role="form">
-            <input type="hidden" class="csrf-token" name="csrf_token" value="{{ csrf_token() }}"/>
-            
-            <div>Show Menu Item:</div>
+            <input type="hidden" class="csrf-token" name="csrf_token" value="{{ csrf_token() }}"/> 
+            <div style="margin-top: 15px">Show Menu Item:</div>
             <select name="show_menu">
-                <option value="yes"   {% if show_menu == 'yes' %}selected{% endif %}>Yes</option>
-                <option value="no"    {% if show_menu == 'no'  %}selected{% endif %}>No</option>
+                <option value="yes" {% if show_menu == 'yes' %}selected{% endif %}>Yes</option>
+                <option value="no" {% if show_menu == 'no'  %}selected{% endif %}>No</option>
             </select>
-            <br/>
-            <br/>
-            <br/>
-
+            <br>
             <br>
             <div>
                 {{ _("Electrum Server:") }} 
                 <label><input type="radio" class="inline" style="margin: 0 10px 0 20px;" id="elec_option_list" name="option_mode" value="list" >{{ _("list") }}</label>
                 <label><input type="radio" class="inline" style="margin: 0 10px 0 20px"  id="elec_option_manual" name="option_mode" value="manual" >{{ _("manual") }}</label>
             </div>
-            <br>
-        
-            
             <div id = "elec_manual_container" style="display: none">
                 <div style="margin-top: 10px">
                     Host:<br><input type="text" id="host" name="host" type="text" value="{{ host }}">
                 </div>
-                <div style="margin-top: 10px">
+                <div style="margin-top: 10px; margin-bottom: 10px">
                     Port:<br><input type="text" id="port" name="port" type="text" value="{{ port }}">
                 </div>
                 <label style="font-size: 1em;">{{ _("Use ssl:") }}&nbsp;</label>
@@ -52,8 +40,6 @@
                     <input type="checkbox" name="ssl" style="margin: auto;" {% if ssl %}checked{% endif %}>
                     <span class="slider"></span>
                 </label>
-        
-                
             </div>
         
             <div id ="elec_list_container" style="display: none">    
@@ -63,13 +49,9 @@
                     {% endfor %}
                 </select>
             </div>
-
-            <br><br><br>
-
-            <div class="row">
+            <div class="row" style="margin-top: 25px">
                 <button type="submit" class="btn">{{ _("Save") }}</button>
             </div>
-
         </form>
     </div>
     <br/>

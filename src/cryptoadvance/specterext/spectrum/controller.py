@@ -46,8 +46,7 @@ def node_settings(node_alias=None):
 @spectrum_endpoint.route("/settings", methods=["GET"])
 @login_required
 def settings_get():
-
-    # Get the user's Wallet objs, sorted by Wallet.name
+    # Show current configuration
     electrum_options = app.config["ELECTRUM_OPTIONS"]
     spectrum_node: SpectrumNode = ext().spectrum_node
     host = spectrum_node.host
@@ -70,7 +69,7 @@ def settings_get():
 @spectrum_endpoint.route("/settings", methods=["POST"])
 @login_required
 def settings_post():
-
+    # Set the Electrum server settings
     host = request.form.get('host')
     try:
         port = int(request.form.get('port'))
@@ -85,8 +84,14 @@ def settings_post():
         host = electrum_options[elec_option]["host"]
         port = electrum_options[elec_option]["port"]
         ssl = electrum_options[elec_option]["ssl"]
-
     ext().update_electrum(host, port, ssl)
+    # Set the menu item
+    show_menu = request.form["show_menu"]
+    user = specter().user_manager.get_user()
+    if show_menu == "yes":
+        user.add_service(ext().id)
+    else:
+        user.remove_service(ext().id)
     return redirect(url_for(f"{ SpectrumService.get_blueprint_name()}.settings_get"))
 
 @spectrum_endpoint.route("/spectrum_setup", methods=["GET"])
