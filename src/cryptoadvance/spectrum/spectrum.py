@@ -546,7 +546,9 @@ class Spectrum:
 
     @rpc
     def listwallets(self):
-        return [w.name for w in Wallet.query.all()]
+        wallets = [w.name for w in Wallet.query.all()]
+        logger.debug(f"These are the wallets from listwallets call: {wallets}")
+        return wallets
 
     @rpc
     def listwalletdir(self):

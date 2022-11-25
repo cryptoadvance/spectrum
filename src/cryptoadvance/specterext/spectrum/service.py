@@ -45,8 +45,8 @@ class SpectrumService(Service):
         ''' Whether there is a spectrum Node available (activated or not) '''
         return not self.spectrum_node is None
 
-
-    def callback_after_serverpy_init_app(self, scheduler: APScheduler):
+    def callback_specter_added_to_flask_app(self):
+        logger.debug("Setting up Spectrum ...")
         # See comments in config.py which would be the natural place to define SPECTRUM_DATADIR
         # but we want to avoid RuntimeError: Working outside of application context.
         app.config["SPECTRUM_DATADIR"] = os.path.join(app.config["SPECTER_DATA_FOLDER"], "sqlite")
@@ -58,13 +58,13 @@ class SpectrumService(Service):
         logger.info(f"Intitializing Database in {app.config['SQLALCHEMY_DATABASE_URI']}")
         db.init_app(app)
         db.create_all()
+        # Check whether there is a Spectrum node in the node manager of Specter
         if self.is_spectrum_enabled:
             try:
                 self.spectrum_node.start_spectrum(app, self.data_folder)
                 self.activate_spectrum_node()
             except BrokenCoreConnectionException as e:
                 logger.error(e)
-            
 
     def enable_spectrum(self):
         ''' * starts spectrum 
