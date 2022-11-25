@@ -12,8 +12,9 @@ class SpectrumNode(AbstractNode):
     external_node=True
     #logging.getLogger("cryptoadvance.spectrum.spectrum").setLevel(logging.INFO)
 
-    def __init__(self, name = "Spectrum Node", alias = "spectrum_node", spectrum=None, host=None, port=None, ssl=None):
+    def __init__(self, name = "Spectrum Node", alias = "spectrum_node", spectrum=None, bridge=None, host=None, port=None, ssl=None):
         self._spectrum = spectrum
+        self.bridge = bridge
         self.name = "Spectrum Node"
         self.alias = "spectrum_node" # used for the file: nodes/spectrum_node.json
         self._host = host
@@ -34,6 +35,7 @@ class SpectrumNode(AbstractNode):
         if self._host is None or self._port is None or self._ssl is None:
             raise BrokenCoreConnectionException(f"Cannot start spectrum without host ({self._host}), port ({self._port}) or ssl ({self._ssl})")
         try:
+            logger.debug(f"{self.name} is creating a Spectrum instance.")
             self.spectrum = Spectrum(
                 self._host,
                 self._port,
@@ -41,6 +43,8 @@ class SpectrumNode(AbstractNode):
                 datadir=datadir,
                 app=app,
             )
+            logger.debug(f"{self.name} is instantiating its BridgeRPC.")
+            self.bridge = BridgeRPC(self.spectrum, app=app)
             self.spectrum.sync()
         except Exception as e:
             logger.exception(e)
@@ -113,6 +117,19 @@ class SpectrumNode(AbstractNode):
             self._rpc = None
 
     @property
+    def bridge(self):
+        return self._bridge
+
+    @bridge.setter
+    def bridge(self, value):
+        self._bridge = value
+        if self._bridge is not None:
+            self._rpc = self._bridge
+        else:    
+            logger.debug(f"No BridgeRPC for Spectrum node, setting rpc to None ...")
+            self._rpc = None
+
+    @property
     def host(self):
         if self.spectrum:
             return self.spectrum.host
@@ -134,7 +151,7 @@ class SpectrumNode(AbstractNode):
     @property
     def rpc(self):
         if self._rpc is None:
-            self._rpc = BridgeRPC(self.spectrum)
+            self._rpc = BridgeRPC(self.spectrum) # TODO: If "app" is used for BridgeRPC in the end, it is missing here. Also, better to use the bridge setter perhaps?
         return self._rpc
 
     def get_rpc(self):
