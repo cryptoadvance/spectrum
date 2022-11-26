@@ -1,15 +1,22 @@
 {% extends "base.jinja" %}
 {% block main %}
-    <br><br>
-    <div class="card">
-        <h1>{{ _("Spectrum - Connecting Specter to Electrum") }}</h1>
-        <br>
-        
-        <div class="note">
-            <img style="width: 100px;" src="{{ url_for('static', filename='img/party.png') }}"/><br><br>
-            {{ _("Congratulations, Specter is now connected via Spectrum to an Electrum Server!") }}
-            <br><br/>
-        </div>
-        <br/>
+<style>
+    .feedback-icon {
+        width: 75px; 
+        margin-bottom: 15px
+    }
+</style>
+<div class="card">
+    <h1>{{ _("Spectrum - Connecting Specter to Electrum") }}</h1>
+    <br>
+    <div style="text-align: center">
+        {% if success %}
+            <img class="feedback-icon" src="{{ url_for('static', filename='img/party.png') }}"/><br>
+            <span class="note">{{ _("Congratulations, Specter is now connected via Spectrum to an Electrum server!") }}</span>
+        {% else %}
+            <img  class="feedback-icon" src="{{ url_for('static', filename='img/broken-connection.svg') }}"/><br>
+            <span class="note">{{ _("Something went wrong. Could not connect to Electrum server. If you use the manual configuration, check whether the port is correct and whether you need to enable SSL.") }}</span>
+        {% endif %}
     </div>
+</div>
 {% endblock %}

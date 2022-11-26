@@ -98,7 +98,12 @@ def settings_post():
 @login_required
 def spectrum_setup():
     ext().enable_spectrum()
+    if ext().spectrum_node.is_running:
+        success = True
+    else:
+        success = False
     return render_template(
         "spectrum/spectrum_setup.jinja",
+        success=success,
     )
 
