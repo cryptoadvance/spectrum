@@ -41,7 +41,7 @@ class SpectrumService(Service):
         return None
     
     @property
-    def is_spectrum_enabled(self):
+    def is_spectrum_node_available(self):
         ''' Whether there is a spectrum Node available (activated or not) '''
         return not self.spectrum_node is None
 
@@ -59,20 +59,19 @@ class SpectrumService(Service):
         db.init_app(app)
         db.create_all()
         # Check whether there is a Spectrum node in the node manager of Specter
-        if self.is_spectrum_enabled:
+        if self.is_spectrum_node_available:
             try:
                 self.spectrum_node.start_spectrum(app, self.data_folder)
-                self.activate_spectrum_node()
             except BrokenCoreConnectionException as e:
                 logger.error(e)
 
-    def enable_spectrum(self):
-        ''' * starts spectrum 
-            * inject it into the node (or create/save the node if not existing)
-            * activate this node
+    # TODO: Refactor this or the next function to only have one
+    def enable_default_spectrum(self):
+        ''' * Creates and saves a Spectrum node if there is none with the default config values ("ELECTRUM_DEFAULT_OPTION")
+            * Starts Spectrum 
+            * Switches to the Spectrum node
         '''
-        has_spectrum_node = False
-        if not self.is_spectrum_enabled:
+        if not self.is_spectrum_node_available:
             # No SpectrumNode yet created. Let's do that.
             default_electrum = app.config["ELECTRUM_DEFAULT_OPTION"]
             spectrum_node = SpectrumNode(
@@ -85,26 +84,46 @@ class SpectrumService(Service):
         self.spectrum_node.start_spectrum(app, self.data_folder)
         self.activate_spectrum_node()
 
+    def enable_spectrum(self, host, port, ssl, activate_spectrum_node=False):
+        ''' * Creates a Spectrum node if there is none
+            * Starts Spectrum 
+            * Does by default NOT yet switch to the Spectrum node nor yet save the node to disk
+        '''
+        if not self.is_spectrum_node_available:
+            # No SpectrumNode yet created. Let's do that.
+            logger.debug("Creating a Spectrum node ...")
+            spectrum_node = SpectrumNode(host=host, port=port, ssl=ssl)
+            app.specter.node_manager.nodes[spectrum_node_alias] = spectrum_node
+        self.spectrum_node.start_spectrum(app, self.data_folder)
+        if activate_spectrum_node:
+            self.activate_spectrum_node()
+
     def disable_spectrum(self):
+        """ Stops Spectrum and deletes the Spectrum node """
         self.spectrum_node.stop_spectrum()
         spectrum_node = None
-        if self.is_spectrum_enabled:
-            app.specter.node_manager.delete_node(self.spectrum_node)
+        if self.is_spectrum_node_available:
+            app.specter.node_manager.delete_node(self.spectrum_node, app.specter)
         logger.info("Spectrum disabled")
 
     def update_electrum(self, host, port, ssl):
-        if not self.is_spectrum_enabled:
-            raise Exception("Spectrum is not enabled. Cannot start Electrum")
-        logger.info(f"Updating spectrum_node with {host}:{port} (ssl: {ssl})")
+        if not self.is_spectrum_node_available:
+            raise Exception("No Spectrum node available. Cannot start Spectrum.")
+        logger.info(f"Updating Spectrum node with {host}:{port} (ssl: {ssl})")
         self.spectrum_node.update_electrum(host, port, ssl, app, self.data_folder)
-        app.specter.node_manager.save_node(self.spectrum_node)
 
     def activate_spectrum_node(self):
-        if not self.is_spectrum_enabled:
+        """Makes the Spectrum node the new active node and saves it to disk"""
+        logger.info("Activating Spectrum node.")
+        if not self.is_spectrum_node_available:
             raise Exception("Spectrum is not enabled. Cannot start Electrum")
         nm: NodeManager = app.specter.node_manager
-        nm.switch_node(spectrum_node_alias)
-        logger.info(f"Activated node {self.spectrum_node} with rpc {self.spectrum_node.rpc}")
+        if self.spectrum_node.is_running:
+            nm.switch_node(spectrum_node_alias)
+            app.specter.node_manager.save_node(self.spectrum_node)
+            logger.info(f"Activated node {self.spectrum_node} with rpc {self.spectrum_node.rpc}")
+        else:
+            raise SpecterError("Trying to switch Spectrum node but there seems to be a connection problem.")
 
     def callback_adjust_view_model(self, view_model: WelcomeVm):
         if view_model.__class__.__name__ == "WelcomeVm":

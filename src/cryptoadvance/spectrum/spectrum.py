@@ -126,9 +126,12 @@ class Spectrum:
         logger.info("Stopping Spectrum")
         del self.sock
 
-    def is_connected(self):
-        return self.sock is not None
-
+    def is_connected(self) -> bool:
+        """Returns True if there is a socket connection, False otherwise."""
+        if self.sock:
+            return True
+        else:
+            return False
 
     @property
     def txdir(self):

@@ -33,9 +33,9 @@ class SpectrumNode(AbstractNode):
 
     def start_spectrum(self, app, datadir):
         if self._host is None or self._port is None or self._ssl is None:
-            raise BrokenCoreConnectionException(f"Cannot start spectrum without host ({self._host}), port ({self._port}) or ssl ({self._ssl})")
+            raise BrokenCoreConnectionException(f"Cannot start Spectrum without host ({self._host}), port ({self._port}) or ssl ({self._ssl})")
         try:
-            logger.debug(f"{self.name} is creating a Spectrum instance.")
+            logger.debug(f"Spectrum node is creating a Spectrum instance.")
             self.spectrum = Spectrum(
                 self._host,
                 self._port,
@@ -56,13 +56,14 @@ class SpectrumNode(AbstractNode):
 
     def update_electrum(self, host, port, ssl, app, datadir):
         if host is None or port is None or ssl is None:
-            raise BrokenCoreConnectionException(f"Cannot start spectrum without host ({host}), port ({port}) or ssl ({ssl})")
+            raise BrokenCoreConnectionException(f"Cannot start Spectrum without host ({host}), port ({port}) or ssl ({ssl})")
         self._host = host
         self._port = port
         self._ssl = ssl
         self.stop_spectrum()
         self.start_spectrum(app, datadir)
 
+    # TODO fullpath is not implemented which is necessary to delete the node
 
     @classmethod
     def from_json(cls, node_dict, *args, **kwargs):
@@ -93,8 +94,12 @@ class SpectrumNode(AbstractNode):
         )
 
     @property
-    def is_running(self):
-        return self.spectrum.is_connected()
+    def is_running(self) -> bool:
+        if self.spectrum:
+            return self.spectrum.is_connected()
+        else:
+            # If there is no Spectrum object, there can't be a (socket) connection
+            return False
 
     def check_blockheight(self):
         ''' This naive implementation always returns True: Claiming that new blocks have arrived, we're forcing 
@@ -106,7 +111,11 @@ class SpectrumNode(AbstractNode):
 
     @property
     def spectrum(self):
-        return self._spectrum
+        """Returns None if the Spectrum node has no Spectrum object"""
+        if self._spectrum:
+            return self._spectrum
+        else:
+            return None
 
     @spectrum.setter
     def spectrum(self, value):
