@@ -1,0 +1,5 @@
+recursive-include src/cryptoadvance/specterext/spectrum/templates *
+recursive-include src/cryptoadvance/specterext/spectrum/static *
+recursive-include src/cryptoadvance/specterext/spectrum/*/LC_MESSAGES *.mo
+recursive-include src/cryptoadvance/specterext/spectrum/translations/*/LC_MESSAGES *.po
+include requirements.txt

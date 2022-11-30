@@ -49,5 +49,7 @@ def test_importdescriptor(app: Flask, rootkey_hold_accident, acc0key0addr_hold_a
         assert acc0key0addr_hold_accident == script.address(network=NETWORKS['test'])
         # Depending on the state of electrs, it might take 5 seconds for the sync-thread to finish
         # It does not change anything on the result of the test, though
-        time.sleep(5)
-        # assert False
+    
+    spectrum.stop()
+    del spectrum
+

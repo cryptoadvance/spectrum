@@ -1,31 +1,14 @@
 ''' A config module contains static configuration '''
+import configparser
+import datetime
 import logging
 import os
-from pathlib import Path
-import datetime
 import secrets
+from pathlib import Path
 
-try:
-    # Python 2.7
-    import ConfigParser as configparser
-except ImportError:
-    # Python 3
-    import configparser
-
-# BASEDIR = os.path.abspath(os.path.dirname(__file__))
+from cryptoadvance.specter.config import _get_bool_env_var
 
 logger = logging.getLogger(__name__)
-
-def _get_bool_env_var(varname, default=None):
-    value = os.environ.get(varname, default)
-    if value is None:
-        return False
-    elif isinstance(value, str) and value.strip().lower() == 'false':
-        return False
-    elif bool(value) is False:
-        return False
-    else:
-        return bool(value)
 
 class BaseConfig(object):
     """Base configuration."""
@@ -33,13 +16,13 @@ class BaseConfig(object):
     USERNAME='admin'
     HOST="127.0.0.1"
     PORT=8081
-    DATADIR="data" # used for sqlite but also for txs-cache
+    SPECTRUM_DATADIR="data" # used for sqlite but also for txs-cache
 
 # Level 1: How does persistence work?
 # Convention: BlaConfig
 
 class LiteConfig(BaseConfig):
-    DATABASE=os.path.abspath(os.path.join(BaseConfig.DATADIR, "wallets.sqlite"))
+    DATABASE=os.path.abspath(os.path.join(BaseConfig.SPECTRUM_DATADIR, "wallets.sqlite"))
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 
@@ -59,7 +42,7 @@ class PostgresConfig(BaseConfig):
 class NigiriLocalElectrumLiteConfig(LiteConfig):
     ELECTRUM_HOST="127.0.0.1"
     ELECTRUM_PORT=50000
-    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false")
+    ELECTRUM_USES_SSL=_get_bool_env_var('ELECTRUM_USES_SSL', default="false") # Nigiri doesn't use SSL
 
 class EmzyElectrumLiteConfig(LiteConfig):
     ELECTRUM_HOST=os.environ.get('ELECTRUM_HOST', default='electrum.emzy.de')

@@ -11,8 +11,26 @@ from embit.script import Script as EmbitScript
 from enum import Enum
 import time
 from .util import sat_to_btc
+from sqlalchemy.ext.declarative import declared_attr
+from cryptoadvance.specter.util.common import snake_case2camelcase
+from sqlalchemy.orm import DeclarativeMeta, declarative_base
+from flask_sqlalchemy.model import BindMetaMixin, Model
 
-db = SQLAlchemy()
+
+class NoNameMeta(BindMetaMixin, DeclarativeMeta):
+    pass
+
+CustomModel = declarative_base(cls=Model, metaclass=NoNameMeta, name="Model")
+
+db = SQLAlchemy(model_class=CustomModel)
+#db = SQLAlchemy()
+
+
+class SpectrumModel(db.Model):
+    __abstract__ = True
+    @declared_attr
+    def __tablename__(cls):
+        return 'spectrum_' + snake_case2camelcase(cls.__name__)
 
 
 class TxCategory(Enum):
@@ -25,7 +43,7 @@ class TxCategory(Enum):
         return self.name.lower()
 
 
-class Wallet(db.Model):
+class Wallet(SpectrumModel):
     id = db.Column(db.Integer, primary_key=True)
     # maybe later User can be added to the wallet,
     # so wallet name may not be unique
@@ -48,11 +66,10 @@ class Wallet(db.Model):
         return 1000
 
 
-class Descriptor(db.Model):
+class Descriptor(SpectrumModel):
     """Descriptors tracked by the wallet"""
-
     id = db.Column(db.Integer, primary_key=True)
-    wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
+    wallet_id = db.Column(db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False)
     wallet = db.relationship("Wallet", backref=db.backref("descriptors", lazy=True))
     # if we should use this descriptor for new addresses
     active = db.Column(db.Boolean, default=True)
@@ -90,13 +107,13 @@ class Descriptor(db.Model):
 
 
 # We store script pubkeys instead of addresses as database is chain-agnostic
-class Script(db.Model):
+class Script(SpectrumModel):
     id = db.Column(db.Integer, primary_key=True)
-    wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
+    wallet_id = db.Column(db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False)
     wallet = db.relationship("Wallet", backref=db.backref("scripts", lazy=True))
     # this must be nullable as we may need to label external scripts
     descriptor_id = db.Column(
-        db.Integer, db.ForeignKey("descriptor.id"), nullable=True, default=None
+        db.Integer, db.ForeignKey(f"{Descriptor.__tablename__}.id"), nullable=True, default=None
     )
     descriptor = db.relationship("Descriptor", backref=db.backref("scripts", lazy=True))
     # derivation index if it's our address
@@ -121,7 +138,7 @@ class Script(db.Model):
         return EmbitScript(bytes.fromhex(self.script))
 
 
-class UTXO(db.Model):
+class UTXO( SpectrumModel):
     id = db.Column(db.Integer, primary_key=True)
     txid = db.Column(db.String(64))
     vout = db.Column(db.Integer)
@@ -131,13 +148,13 @@ class UTXO(db.Model):
     # frozen or not
     locked = db.Column(db.Boolean, default=False)
     # refs
-    script_id = db.Column(db.Integer, db.ForeignKey("script.id"))
+    script_id = db.Column(db.Integer, db.ForeignKey(f"{Script.__tablename__}.id"))
     script = db.relationship("Script", backref=db.backref("utxos", lazy=True))
-    wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
+    wallet_id = db.Column(db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False)
     wallet = db.relationship("Wallet", backref=db.backref("utxos", lazy=True))
 
 
-class Tx(db.Model):
+class Tx( SpectrumModel):
     id = db.Column(db.Integer, primary_key=True)
     txid = db.Column(db.String(64))
     blockhash = db.Column(db.String(64), default=None)
@@ -149,9 +166,9 @@ class Tx(db.Model):
     amount = db.Column(db.BigInteger, default=0)
     fee = db.Column(db.BigInteger, default=None)  # only for send
     # refs
-    script_id = db.Column(db.Integer, db.ForeignKey("script.id"))
+    script_id = db.Column(db.Integer, db.ForeignKey(f"{Script.__tablename__}.id"))
     script = db.relationship("Script", backref=db.backref("txs", lazy=True))
-    wallet_id = db.Column(db.Integer, db.ForeignKey("wallet.id"), nullable=False)
+    wallet_id = db.Column(db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False)
     wallet = db.relationship("Wallet", backref=db.backref("txs", lazy=True))
 
     def to_dict(self, blockheight, network):

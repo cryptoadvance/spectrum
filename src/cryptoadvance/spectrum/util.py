@@ -20,6 +20,11 @@ def scripthash(script):
 
 
 def sat_to_btc(sat):
+    ''' Core is returning floats which is not good. We need to switch over to decimal at some point 
+        but this is not yet used yet.
+        If we do it, also have a look at:
+        https://github.com/relativisticelectron/specter-desktop/pull/3
+    '''
     if not isinstance(sat, Decimal):
         sat = Decimal(sat)
     sat = sat or Decimal(0)  # if None is passed
@@ -46,12 +51,22 @@ class FlaskThread(Thread):
         copied from https://stackoverflow.com/questions/39476889/use-flask-current-app-logger-inside-threading '''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app = app._get_current_object()
         self.daemon = True
+        try:
+            self.app = app._get_current_object()
+            self.flask_mode = True
+        except RuntimeError as e:
+            if str(e).startswith("Working outside of application context."):
+                self.flask_mode = False
+            
 
     def run(self):
-        logger.debug(f"New thread started {self._target.__name__}")
-        with self.app.app_context():
+        if self.flask_mode:
+            with self.app.app_context():
+                logger.debug(f"starting new FlaskThread: {self._target.__name__}")
+                super().run()
+        else:
+            logger.debug(f"starting new Thread: {self._target.__name__}")
             super().run()
 
 
