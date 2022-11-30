@@ -73,6 +73,9 @@ class BridgeRPC(BitcoinRPC):
         if kwargs.get("no_wait"):
             # Zero is treated like None, i.e. infinite wait
             timeout = 0.001
+        
+        # Spectrum uses a DB and access to it needs an app-context. In order to keep that implementation
+        # detail within spectrum, we're establishing a context as needed.
         if not has_app_context() and self._app is not None: 
             with self._app.app_context():
                 return [self.spectrum.jsonrpc(item,wallet_name=self.wallet_name) for item in payload]

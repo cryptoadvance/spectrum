@@ -113,21 +113,15 @@ def settings_post():
     else:
         ext().enable_spectrum(host, port, ssl, activate_spectrum_node=False)
     # Make the Spectrum node the new active node and save it to disk, but only if the connection is working"""
-    # ALPHA_VERSION: Additional check that there is no Bitcoin Core node for the same network alongside the Spectrum node 
+    # BETA_VERSION: Additional check that there is no Bitcoin Core node for the same network alongside the Spectrum node 
     spectrum_node = ext().spectrum_node
-    if spectrum_node is not None:
-        current_spectrum_chain = spectrum_node.chain
-        nodes_current_chain = specter().node_manager.nodes_by_chain(current_spectrum_chain)
-        # Check whether there is a Bitcoin Core node for the same network:
-        core_node_exists = False
-        for node in nodes_current_chain:
-            if node.fqcn == "cryptoadvance.specter.node.Node" and not node.is_liquid:
-                core_node_exists = True
-        if core_node_exists:
-            # Delete Spectrum node again (it wasn't saved to disk yet)
-            del specter().node_manager.nodes[spectrum_node.alias]
-            return render_template("spectrum/spectrum_setup_alpha.jinja",
-                                    core_node_exists=core_node_exists) 
+
+    if check_for_node_on_same_network(spectrum_node):
+        # Delete Spectrum node again (it wasn't saved to disk yet)
+        del specter().node_manager.nodes[spectrum_node.alias]
+        return render_template("spectrum/spectrum_setup_beta.jinja",
+                                    core_node_exists=True)
+
     if ext().spectrum_node.is_running:
         logger.debug("Activating Spectrum node ...")
         ext().activate_spectrum_node()
@@ -145,8 +139,41 @@ def settings_post():
     logger.debug(f"Node running after updating settings: {success}")
     host_after_request = ext().spectrum_node.host
     logger.debug(f"The host after saving the new settings: {host_after_request}")
+    
+    changed_host, check_port_and_ssl = evaluate_current_status(
+        node_is_running_before_request, 
+        host_before_request, 
+        host_after_request, 
+        success
+    )
+
+    return render_template("spectrum/spectrum_setup.jinja", 
+                    success=success, 
+                    changed_host=changed_host,
+                    host_type = option_mode,
+                    check_port_and_ssl = check_port_and_ssl,
+                    )
+
+def check_for_node_on_same_network(spectrum_node):
+        if spectrum_node is not None:
+            current_spectrum_chain = spectrum_node.chain
+            nodes_current_chain = specter().node_manager.nodes_by_chain(current_spectrum_chain)
+            # Check whether there is a Bitcoin Core node for the same network:
+            core_node_exists = False
+            for node in nodes_current_chain:
+                logger.debug(node)
+                if node.fqcn != "cryptoadvance.specterext.spectrum.spectrum_node.SpectrumNode" and not node.is_liquid:
+                    return True
+        return False
+
+def evaluate_current_status(node_is_running_before_request, host_before_request, host_after_request, success):
+    ''' Figures out whether the:
+        * the user changed the host and/or
+        * the user changed the port/ssl
+        and returns two booleans: changed_host, check_port_and_ssl
+        useful for user-feedback.
+    '''
     changed_host = False
-    host_type = option_mode
     check_port_and_ssl = False
     if node_is_running_before_request == success and success == True and host_before_request == host_after_request:
         # Case 1: We changed a setting that didn't impact the Spectrum node, currently only the menu item setting
@@ -170,10 +197,4 @@ def settings_post():
         else:
             # Not necessary since this is set to False by default, just to improve readability
             check_port_and_ssl = False
-    return render_template("spectrum/spectrum_setup.jinja", 
-                    success=success, 
-                    changed_host=changed_host,
-                    host_type = host_type,
-                    check_port_and_ssl = check_port_and_ssl,
-                    )
-                    
+    return changed_host, check_port_and_ssl
