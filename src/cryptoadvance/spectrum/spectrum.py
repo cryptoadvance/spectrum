@@ -126,9 +126,12 @@ class Spectrum:
         logger.info("Stopping Spectrum")
         del self.sock
 
-    def is_connected(self):
-        return self.sock is not None
-
+    def is_connected(self) -> bool:
+        """Returns True if there is a socket connection, False otherwise."""
+        if self.sock:
+            return True
+        else:
+            return False
 
     @property
     def txdir(self):
@@ -546,7 +549,9 @@ class Spectrum:
 
     @rpc
     def listwallets(self):
-        return [w.name for w in Wallet.query.all()]
+        wallets = [w.name for w in Wallet.query.all()]
+        logger.debug(f"These are the wallets from listwallets call: {wallets}")
+        return wallets
 
     @rpc
     def listwalletdir(self):

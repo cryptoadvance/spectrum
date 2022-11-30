@@ -1,20 +1,13 @@
+{% set node = specter.node %}
 {% if specter.node.is_running %}
     <div id="active-node" onclick="showPageOverlay('bitcoin_core_info');document.getElementById('side-content').classList.remove('active');" class="item core" style="cursor: pointer;">
-        <img src="{{ url_for('spectrum_endpoint.static', filename='spectrum/img/electrum_lightblue.svg') }}" width="40"/>
+        <img src="{{ url_for('spectrum_endpoint.static', filename='spectrum/img/logo.svg') }}" width="40"/>
         {% include "includes/sidebar/components/bitcoin_core_info.jinja" %}
         <div>
-            <span style="max-width: 140px;">{{ specter.node.name }}</span>
+            <span style="max-width: 140px;">{{ node.name }}</span> <br>
             <small>
                 {% if specter.chain %}
-                    {% if specter.bitcoin_core_version != '' %}
-                        v{{ specter.bitcoin_core_version }}
-                    {% endif %}
-                    ({{specter.chain}}):
-                    {% if specter.info["blocks"] %}
-                        {{ specter.info.blocks }} blocks
-                    {% else %}
-                        {{ specter.info.chain }}
-                    {% endif %}
+                    {{node.chain | title}} node
                 {% endif %}
             </small>
         </div>

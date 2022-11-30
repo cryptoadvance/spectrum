@@ -17,10 +17,6 @@ def create_app(config="cryptoadvance.spectrum.config.EmzyElectrumLiteConfig"):
     app = Flask(__name__)
     app.config.from_object(config)
     logger.info(f"config: {config}")
-
-
-
-
     return app
 
 def init_app(app, datadir=None, standalone=True):

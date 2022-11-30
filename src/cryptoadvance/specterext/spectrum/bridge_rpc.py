@@ -15,6 +15,8 @@ from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
 
 from cryptoadvance.spectrum.spectrum import RPCError, Spectrum
 
+from flask import has_app_context
+
 logger = logging.getLogger(__name__)
 
 # TODO: redefine __dir__ and help
@@ -25,10 +27,12 @@ class BridgeRPC(BitcoinRPC):
     def __init__(
         self,
         spectrum,
-        wallet_name=None
+        app=None,
+        wallet_name=None,
     ):
         self.spectrum: Spectrum = spectrum
         self.wallet_name = wallet_name
+        self._app = app
 
     def wallet(self, name=""):
         return type(self)(
@@ -69,7 +73,14 @@ class BridgeRPC(BitcoinRPC):
         if kwargs.get("no_wait"):
             # Zero is treated like None, i.e. infinite wait
             timeout = 0.001
-        return [ self.spectrum.jsonrpc(item,wallet_name=self.wallet_name) for item in payload ]
+        
+        # Spectrum uses a DB and access to it needs an app-context. In order to keep that implementation
+        # detail within spectrum, we're establishing a context as needed.
+        if not has_app_context() and self._app is not None: 
+            with self._app.app_context():
+                return [self.spectrum.jsonrpc(item,wallet_name=self.wallet_name) for item in payload]
+        else:
+            return [self.spectrum.jsonrpc(item,wallet_name=self.wallet_name) for item in payload]
 
     def __repr__(self) -> str:
         return f"<BridgeRPC {self.spectrum}>"
