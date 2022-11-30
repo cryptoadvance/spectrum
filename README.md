@@ -17,7 +17,7 @@ virtualenv --python=python3 .env
 pip3 install -e .
 
 # If you have a electrum server running on localhost:
-python3 -m cryptoadvance.spectrum server --config cryptoadvance.spectrum.config.LocalElectrumLiteConfig
+python3 -m cryptoadvance.spectrum server --config cryptoadvance.spectrum.config.NigiriLocalElectrumLiteConfig
 
 # If you want to run on mainnet and use emzy's Server
 python3 -m cryptoadvance.spectrum server --config cryptoadvance.spectrum.config.EmzyElectrumLiteConfig
