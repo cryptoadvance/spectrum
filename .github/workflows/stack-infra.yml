@@ -28,10 +28,12 @@ jobs:
         run: |
           pip3 install -r requirements.txt && pip3 install -r test_requirements.txt
           pip3 install -e .
-      - name: Run Nigiri
-        uses: vulpemventures/nigiri-github-action@v1
-        with:
-          use_liquid: false
+      - name: Run Bitcoin Stack
+        run: |
+          docker compose --env-file .env.dev up -d bitcoin electrs
+          bin/stack bitcoin -named createwallet wallet_name=default descriptors=false
+          bin/stack bitcoin sethdseed true cSXteaZPxiDNEjtsgMhDKik5CL6YUc2hrEdkm51DrL85873UUFiQ
+          bin/stack bitcoin generate 101
       - name: Run integration tests
         run: |
           pytest tests/integration/wallet_import_rescan.py

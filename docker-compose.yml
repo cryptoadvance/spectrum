@@ -1,0 +1,64 @@
+version: "2.4"
+
+networks:
+  bitcoinstacknet:
+    driver: bridge
+
+volumes:
+  bitcoin_data:
+  bitcoin_shared:
+
+services:
+  bitcoin:
+    container_name: ${COMPOSE_PROJECT_NAME}_bitcoin
+    image: bitcoinstack/bitcoin:${BITCOIN_VERSION}-alpine
+    restart: unless-stopped
+    command: [
+      "-regtest=1",
+      "-upnp=0",
+      "-server=1",
+      "-txindex=1",
+      "-onlynet=ipv4",
+      "-dnsseed=0",
+      "-dbcache=10",
+      "-port=${BITCOIN_PORT}",
+      "-rpcport=${BITCOIN_RPC_PORT}",
+      "-rpcuser=${BITCOIN_RPC_USER}",
+      "-rpcpassword=${BITCOIN_RPC_PASSWORD}",
+      "-rpcallowip=0.0.0.0/0",
+      "-rpcbind=127.0.0.1",
+      "-rpcbind=${BITCOIN_HOST}",
+      "-zmqpubrawtx=tcp://0.0.0.0:${BITCOIN_ZMQ_TX_PORT}",
+      "-zmqpubhashtx=tcp://0.0.0.0:${BITCOIN_ZMQ_TX_PORT}",
+      "-zmqpubrawblock=tcp://0.0.0.0:${BITCOIN_ZMQ_BLOCK_PORT}",
+      "-zmqpubhashblock=tcp://0.0.0.0:${BITCOIN_ZMQ_BLOCK_PORT}"
+    ]
+    networks:
+      bitcoinstacknet:
+        aliases:
+          - ${BITCOIN_HOST}
+    ports:
+      - "127.0.0.1:${BITCOIN_RPC_PORT}:${BITCOIN_RPC_PORT}"
+    volumes:
+      - bitcoin_data:/home/bitcoin/.bitcoin
+      - bitcoin_shared:/opt/bitcoin/bin
+
+  electrs:
+    container_name: ${COMPOSE_PROJECT_NAME}_electrs
+    image: bitcoinstack/electrs:${ELECTRS_VERSION}-alpine
+    restart: unless-stopped
+    command: [
+      'electrs',
+      '--timestamp',
+      '--network=regtest',
+      '--daemon-p2p-addr=bitcoin:${BITCOIN_PORT}',
+      '--daemon-rpc-addr=bitcoin:${BITCOIN_RPC_PORT}',
+      '--electrum-rpc-addr=0.0.0.0:${ELECTRS_PORT}',
+      '--db-dir=/home/electrs/db'
+    ]
+    ports:
+      - "127.0.0.1:${ELECTRS_PORT}:${ELECTRS_PORT}"
+    depends_on:
+      - bitcoin
+    networks:
+      - bitcoinstacknet
