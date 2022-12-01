@@ -119,7 +119,7 @@ class SpectrumService(Service):
             raise Exception("Spectrum is not enabled. Cannot start Electrum")
         nm: NodeManager = app.specter.node_manager
         if self.spectrum_node.is_running:
-            nm.switch_node(spectrum_node_alias)
+            app.specter.update_active_node(spectrum_node_alias)
             app.specter.node_manager.save_node(self.spectrum_node)
             logger.info(f"Activated node {self.spectrum_node} with rpc {self.spectrum_node.rpc}")
         else:
