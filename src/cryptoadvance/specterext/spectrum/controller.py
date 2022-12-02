@@ -110,7 +110,7 @@ def settings_post():
     # BETA_VERSION: Additional check that there is no Bitcoin Core node for the same network alongside the Spectrum node 
     spectrum_node = ext().spectrum_node
 
-    if check_for_node_on_same_network(spectrum_node):
+    if check_for_node_on_same_network(spectrum_node, specter()):
         # Delete Spectrum node again (it wasn't saved to disk yet)
         del specter().node_manager.nodes[spectrum_node.alias]
         return render_template("spectrum/spectrum_setup_beta.jinja",
@@ -146,7 +146,8 @@ def settings_post():
     )
 
     return render_template("spectrum/spectrum_setup.jinja", 
-                    success=success, 
+                    success=success,
+                    node_is_running_before_request = node_is_running_before_request,
                     changed_host=changed_host,
                     host_type = option_mode,
                     check_port_and_ssl = check_port_and_ssl,

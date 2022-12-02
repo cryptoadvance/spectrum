@@ -7,12 +7,15 @@ import sys
 import tempfile
 import traceback
 from binascii import hexlify
-
 import pytest
+
 from cryptoadvance.specter.key import Key
+from cryptoadvance.specter.persistence import PersistentObject
 from cryptoadvance.spectrum.cli import setup_logging
 from cryptoadvance.spectrum.config import TestConfig
 from cryptoadvance.spectrum.server import create_app, init_app
+from cryptoadvance.specterext.spectrum.spectrum_node import SpectrumNode
+
 from embit import script
 from embit.bip32 import NETWORKS, HDKey
 from embit.bip39 import mnemonic_to_seed
@@ -154,4 +157,21 @@ def app_nigiri() -> Flask:
 def client(app):
     """a test_client from an initialized Flask-App"""
     return app.test_client()
+
+@pytest.fixture
+def spectrum_node():
+    """ A Spectrum node """
+    node_dict= {
+        "python_class": "cryptoadvance.specterext.spectrum.spectrum_node.SpectrumNode",
+        "name": "Spectrum Node",
+        "alias": "spectrum_node",
+        "host": "electrum.emzy.de",
+        "port": 5002,
+        "ssl": True
+    }
+
+    # Instantiate via PersistentObject:
+    sn = PersistentObject.from_json(node_dict)
+    assert type(sn) == SpectrumNode
+    return sn
 

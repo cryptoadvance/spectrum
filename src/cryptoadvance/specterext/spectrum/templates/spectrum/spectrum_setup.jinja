@@ -35,7 +35,7 @@
                 <span class="feedback-text">{{ _("Specter is connected via Spectrum to a public Electrum server!") }}</span>
             {% else %}
                 <img  class="feedback-icon" src="{{ url_for('static', filename='img/failed.svg') }}"/><br>
-                {% if changed_host %}
+                {% if changed_host and node_is_running_before_request %}
                     <span class="feedback-text">{{ _("Cannot connect to the public Electrum server. You changed the settings from a working connection to a server that is not responding. 
                     Consider switching back to the one you had chosen before.") }}</span>
                 {% else %}
@@ -49,11 +49,13 @@
                 <span class="feedback-text">{{ _("Specter is connected via Spectrum to a manually configured Electrum server!") }}</span>
             {% else %}
                 <img class="feedback-icon" src="{{ url_for('static', filename='img/failed.svg') }}"/><br>
-                {% if changed_host %}
+                {% if changed_host and node_is_running_before_request %}
                     <span class="feedback-text">{{ _("Cannot connect to the manually configured Electrum server. You changed the settings from a working connection to a server that is not responding. 
                     Consider switching back to the one you had chosen before.") }}</span>
-                {% elif check_port_and_ssl %}
+                {% elif not changed_host and check_port_and_ssl %}
                     <span class="feedback-text">{{ _("Cannot connect to the manually configured Electrum server. Double-check that the port and SSL settings are correct.") }}</span>
+                {% elif changed_host and check_port_and_ssl %}
+                    <span class="feedback-text">{{ _("Cannot connect to the manually configured Electrum server. Double-check all the configuration settings.") }}</span>
                 {% else %}
                     <span class="feedback-text">{{ _("Cannot connect to the manually configured Electrum server.") }}</span>
                 {% endif %}

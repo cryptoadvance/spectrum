@@ -15,10 +15,10 @@ def specter() -> Specter:
     ''' convenience for getting the specter-object'''
     return app.specter
 
-def check_for_node_on_same_network(spectrum_node):
+def check_for_node_on_same_network(spectrum_node, specter: Specter):
         if spectrum_node is not None:
             current_spectrum_chain = spectrum_node.chain
-            nodes_current_chain = specter().node_manager.nodes_by_chain(current_spectrum_chain)
+            nodes_current_chain = specter.node_manager.nodes_by_chain(current_spectrum_chain)
             # Check whether there is a Bitcoin Core node for the same network:
             core_node_exists = False
             for node in nodes_current_chain:
@@ -55,4 +55,14 @@ def evaluate_current_status(node_is_running_before_request, success, host_before
         else:
             # Not necessary since this is set to False by default, just to improve readability
             check_port_and_ssl = False
+    if not node_is_running_before_request and not success:
+        # Case 7: We don't get a connection running for the current host, perhaps it is due to the port / ssl
+        if host_before_request == host_after_request and host_before_request != None:
+            check_port_and_ssl = True
+        # Case 7: Unclear what the issue is, best to check everything
+        if host_before_request != host_after_request:
+            changed_host = True
+            check_port_and_ssl = True
+        
+
     return changed_host, check_port_and_ssl
