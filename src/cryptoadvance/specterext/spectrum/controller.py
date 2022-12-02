@@ -140,11 +140,15 @@ def settings_post():
     host_after_request = ext().spectrum_node.host
     logger.debug(f"The host after saving the new settings: {host_after_request}")
     
+    if node_is_running_before_request == success and success == True and host_before_request == host_after_request:
+        # Case 1: We changed a setting that didn't impact the Spectrum node, currently only the menu item setting
+            return redirect(url_for(f"{ SpectrumService.get_blueprint_name()}.settings_get"))
+            
     changed_host, check_port_and_ssl = evaluate_current_status(
-        node_is_running_before_request, 
+        node_is_running_before_request,
+        success,
         host_before_request, 
         host_after_request, 
-        success
     )
 
     return render_template("spectrum/spectrum_setup.jinja", 
@@ -166,7 +170,7 @@ def check_for_node_on_same_network(spectrum_node):
                     return True
         return False
 
-def evaluate_current_status(node_is_running_before_request, host_before_request, host_after_request, success):
+def evaluate_current_status(node_is_running_before_request, success, host_before_request, host_after_request):
     ''' Figures out whether the:
         * the user changed the host and/or
         * the user changed the port/ssl
@@ -175,9 +179,6 @@ def evaluate_current_status(node_is_running_before_request, host_before_request,
     '''
     changed_host = False
     check_port_and_ssl = False
-    if node_is_running_before_request == success and success == True and host_before_request == host_after_request:
-        # Case 1: We changed a setting that didn't impact the Spectrum node, currently only the menu item setting
-            return redirect(url_for(f"{ SpectrumService.get_blueprint_name()}.settings_get"))
     if node_is_running_before_request == success and success == True and host_before_request != host_after_request:
         # Case 2: We changed the host but switched from one working connection to another one
             changed_host = True
