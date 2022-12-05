@@ -15,6 +15,7 @@ from distutils import core
 import logging
 import shutil
 import sys
+import pytest
 from decimal import Decimal, getcontext
 from random import random
 import time
@@ -34,6 +35,7 @@ logger = logging.getLogger("cryptoadvance")
 number_of_txs = 10
 keypoolrefill = number_of_txs
 
+# Test is green in local dev
 def test_import_nigiri_core(
     caplog,
     empty_data_folder,
@@ -55,6 +57,10 @@ def test_import_nigiri_core(
         rootkey_hold_accident
     )
 
+# Skipping for now
+# It would make more sense to setup a Spectrum and a Spectrum node here and check whether an import of wallet "w1" results in the same balace 
+# Definitely makes no sense to do to the sending from w0 to w1 twice.
+@pytest.mark.skip
 def test_import_spectrum_nigiri_electrs_core( 
     caplog,
     app_nigiri,
@@ -66,7 +72,10 @@ def test_import_spectrum_nigiri_electrs_core(
     ''' Test is using a rpc connecting to spectrum which is connected via nigiri's electrs to nigiri's core
     '''
     caplog.set_level(logging.INFO)
+    # Can't be right here!
     spectrum_rpc: BitcoinRPC = BitcoinRPC(user="", password="", host="localhost", port="8081")
+    spectrum_node = SpectrumNode(host=host, port=port, ssl=ssl)
+
     btc_rpc: BitcoinRPC = BitcoinRPC(user="admin1", password="123", host="localhost", port="18443")
     runtest_import_via(spectrum_rpc, 
         btc_rpc,
@@ -170,7 +179,7 @@ def runtest_import_via(spectrum_rpc,
         spectrum_rpc,
         "regtest",
         None,
-        allow_threading=False,
+        allow_threading_for_testing=False,
     )
     wallet: Wallet = wm.create_wallet(
         "hold_accident", 1, "wpkh", [acc0key], MagicMock()
