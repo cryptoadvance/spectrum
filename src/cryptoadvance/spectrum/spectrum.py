@@ -1,4 +1,3 @@
-from decimal import Decimal
 import json
 import logging
 import math
@@ -316,7 +315,7 @@ class Spectrum:
             raise RPCError(f"Requested wallet {wallet_name} does not exist or is not loaded", -18)
         return w
 
-    def jsonrpc(self, obj, wallet_name=None):
+    def jsonrpc(self, obj, wallet_name=None, catch_exceptions=True):
         method = obj.get("method")
         id = obj.get("id", 0)
         params = obj.get("params", [])
@@ -345,9 +344,13 @@ class Spectrum:
             else:
                 res = m(*args, **kwargs)
         except RPCError as e:
+            if not catch_exceptions:
+                raise e
             logger.error(f"FAIL method: {method} wallet: {wallet_name} args: {args} kwargs: {kwargs} exc {e}")
             return dict(result=None, error=e.to_dict(), id=id)
         except Exception as e:
+            if not catch_exceptions:
+                raise e
             logger.error(f"FAIL method: {method} wallet: {wallet_name} args: {args} kwargs: {kwargs} exc {e}")
             handle_exception(e)
             return dict(result=None, error={"code": -500, "message": str(e)}, id=id)
