@@ -14,7 +14,7 @@ requirements = [
 
 setup(
     name="cryptoadvance.spectrum",
-    version="0.2.2",
+    version="0.2.3",
     license="MIT license",
     url="https://github.com/cryptoadvance/spectrum",
     description="Electrum adaptor for Specter-Desktop",
