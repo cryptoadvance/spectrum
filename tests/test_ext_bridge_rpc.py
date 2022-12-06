@@ -1,6 +1,9 @@
 from cryptoadvance.specterext.spectrum.bridge_rpc import BridgeRPC
 from flask import Flask
+import pytest
 
+
+@pytest.mark.skip()
 def test_getmininginfobridge(caplog, app: Flask):
     print(app.spectrum)
     brpc = BridgeRPC(app.spectrum)
