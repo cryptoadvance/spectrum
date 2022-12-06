@@ -2,7 +2,7 @@ import logging
 import os
 
 from cryptoadvance.specter.managers.node_manager import NodeManager
-from cryptoadvance.specter.services.service import Service, devstatus_prod, devstatus_beta
+from cryptoadvance.specter.services.service import Service, devstatus_prod, devstatus_alpha
 # A SpecterError can be raised and will be shown to the user as a red banner
 from cryptoadvance.specter.specter_error import SpecterError
 from flask import current_app as app
@@ -26,7 +26,7 @@ class SpectrumService(Service):
     desc = "An electrum hidden behind a core API"
     has_blueprint = True
     blueprint_module = "cryptoadvance.specterext.spectrum.controller"
-    devstatus = devstatus_beta
+    devstatus = devstatus_alpha
     isolated_client = False
 
     # TODO: As more Services are integrated, we'll want more robust categorization and sorting logic
