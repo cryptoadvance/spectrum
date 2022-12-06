@@ -6,7 +6,7 @@ import random
 import time
 import threading
 import sys
-from .util import SpectrumException, handle_exception
+from .util import FlaskThread, SpectrumException, handle_exception
 
 # TODO: normal handling of ctrl+C interrupt
 
@@ -33,16 +33,16 @@ class ElectrumSocket:
         self._requests = []
         self._notifications = []
         logger.info("Starting ElectrumSocket Threads ...")
-        self._recv_thread = threading.Thread(target=self.recv_loop)
+        self._recv_thread = FlaskThread(target=self.recv_loop)
         self._recv_thread.daemon = True
         self._recv_thread.start()
-        self._write_thread = threading.Thread(target=self.write_loop)
+        self._write_thread = FlaskThread(target=self.write_loop)
         self._write_thread.daemon = True
         self._write_thread.start()
-        self._ping_thread = threading.Thread(target=self.ping_loop)
+        self._ping_thread = FlaskThread(target=self.ping_loop)
         self._ping_thread.daemon = True
         self._ping_thread.start()
-        self._notify_thread = threading.Thread(target=self.notify_loop)
+        self._notify_thread = FlaskThread(target=self.notify_loop)
         self._notify_thread.daemon = True
         self._notify_thread.start()
         logger.info("Finished starting ElectrumSocket Threads")
