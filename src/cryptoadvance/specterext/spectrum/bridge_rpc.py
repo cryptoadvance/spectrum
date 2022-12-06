@@ -10,7 +10,9 @@ import urllib3
 
 from cryptoadvance.specter.helpers import is_ip_private
 from cryptoadvance.specter.specter_error import SpecterError, handle_exception
-from cryptoadvance.specter.rpc import BitcoinRPC, RpcError
+from cryptoadvance.specter.rpc import BitcoinRPC
+from cryptoadvance.specter.rpc import RpcError as SpecterRpcError
+from cryptoadvance.spectrum.spectrum import RPCError as SpectrumRpcError
 from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
 
 from cryptoadvance.spectrum.spectrum import Spectrum
@@ -88,9 +90,14 @@ class BridgeRPC(BitcoinRPC):
             mock_response = object()
             mock_response.status_code = 500
             mock_response.text =ve
-            raise RpcError(
+            raise SpecterRpcError(
                 f"Request error: {ve}", mock_response
             )
+        except SpectrumRpcError as se:
+            mock_response = object()
+            mock_response.status_code = se.code
+            mock_response.text =se.message
+            raise SpecterRpcError(se.message, mock_response)
              
 
     def __repr__(self) -> str:
