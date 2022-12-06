@@ -10,10 +10,10 @@ import urllib3
 
 from cryptoadvance.specter.helpers import is_ip_private
 from cryptoadvance.specter.specter_error import SpecterError, handle_exception
-from cryptoadvance.specter.rpc import BitcoinRPC
+from cryptoadvance.specter.rpc import BitcoinRPC, RpcError
 from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
 
-from cryptoadvance.spectrum.spectrum import RPCError, Spectrum
+from cryptoadvance.spectrum.spectrum import Spectrum
 
 from flask import has_app_context
 
@@ -76,11 +76,22 @@ class BridgeRPC(BitcoinRPC):
         
         # Spectrum uses a DB and access to it needs an app-context. In order to keep that implementation
         # detail within spectrum, we're establishing a context as needed.
-        if not has_app_context() and self._app is not None: 
-            with self._app.app_context():
-                return [self.spectrum.jsonrpc(item,wallet_name=self.wallet_name) for item in payload]
-        else:
-            return [self.spectrum.jsonrpc(item,wallet_name=self.wallet_name) for item in payload]
+        try:
+            if not has_app_context() and self._app is not None: 
+                with self._app.app_context():
+                    result = [self.spectrum.jsonrpc(item,wallet_name=self.wallet_name, catch_exceptions=False) for item in payload]
+            else:
+                result = [self.spectrum.jsonrpc(item,wallet_name=self.wallet_name, catch_exceptions=False) for item in payload]
+            return result            
+
+        except ValueError as ve:
+            mock_response = object()
+            mock_response.status_code = 500
+            mock_response.text =ve
+            raise RpcError(
+                f"Request error: {ve}", mock_response
+            )
+             
 
     def __repr__(self) -> str:
         return f"<BridgeRPC {self.spectrum}>"

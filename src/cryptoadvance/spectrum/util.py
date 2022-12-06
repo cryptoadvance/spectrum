@@ -25,17 +25,13 @@ def sat_to_btc(sat):
         If we do it, also have a look at:
         https://github.com/relativisticelectron/specter-desktop/pull/3
     '''
-    if not isinstance(sat, Decimal):
-        sat = Decimal(sat)
-    sat = sat or Decimal(0)  # if None is passed
-    return Decimal(round(sat * Decimal(1e-8), 8))
+    sat = sat or 0  # if None is passed
+    return round(sat * 1e-8, 8)
 
 
 def btc_to_sat(btc):
-    if not isinstance(btc, Decimal):
-        btc = Decimal(btc)
-    btc = btc or Decimal(0)  # if None is passed
-    return round(btc * Decimal(1e8))
+    btc = btc or 0  # if None is passed
+    return round(btc * 1e8)
 
 class SpectrumException(Exception):
     pass

@@ -15,6 +15,12 @@ def test_root(caplog,client):
     assert result.status_code == 200
     assert json.loads(result.data)["error"]["message"] == "Method not found (None)"
 
+def test_unknownmethod(caplog, client):
+    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG, logger="cryptoadvance.spectrum")
+    result = client.post("/", json={"method":"unknownmethod"})
+    assert result.status_code == 200
+
 def test_getmininginfo(caplog,client):
     caplog.set_level(logging.INFO)
     caplog.set_level(logging.DEBUG, logger="cryptoadvance.spectrum")
