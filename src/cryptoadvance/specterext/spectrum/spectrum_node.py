@@ -2,7 +2,6 @@ import logging
 from cryptoadvance.specterext.spectrum.bridge_rpc import BridgeRPC
 from cryptoadvance.specter.helpers import deep_update
 from cryptoadvance.specter.node import AbstractNode
-from cryptoadvance.specter.device import Device
 from cryptoadvance.specter.devices.bitcoin_core import BitcoinCore
 from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
 from cryptoadvance.spectrum.spectrum import Spectrum
