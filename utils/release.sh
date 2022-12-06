@@ -67,6 +67,10 @@ case $key in
     PUBLISH="yes"
     shift
     ;;
+    release)
+    RELEASE="yes"
+    shift
+    ;;
     --debug)
     set -x
     shift # past argument
@@ -192,6 +196,9 @@ function main() {
     if [[ -n "$PUBLISH" ]]; then
         publish
     fi
+    if [[ -n "$RELEASE" ]]; then
+        release
+    fi
 
 }
 
@@ -237,14 +244,16 @@ function publish() {
 
 function release() {
     set
+    commit
+    tag
     build
-    #publish
+    publish
 }
 
 
 function tag() {
     echo "    --> Should i now create the tag and push the version $new_version ?"
-    if [ -z $DEV ]; then
+    if [ -n "$DEV" ]; then
         echo "    --> This will push to your origin-remote!"
     else
         echo "    --> THIS WILL PUSH TO THE UPSTREAM-REMOTE!"
@@ -256,7 +265,7 @@ function tag() {
     fi
 
     git tag $new_version 
-    if [ -z $DEV ]; then
+    if [ -n "$DEV" ]; then
         git push origin $new_version
     else
         git push upstream $new_version
