@@ -2,6 +2,7 @@ import logging
 from cryptoadvance.specterext.spectrum.bridge_rpc import BridgeRPC
 from cryptoadvance.specter.helpers import deep_update
 from cryptoadvance.specter.node import AbstractNode
+from cryptoadvance.specter.devices.bitcoin_core import BitcoinCore
 from cryptoadvance.specter.specter_error import BrokenCoreConnectionException
 from cryptoadvance.spectrum.spectrum import Spectrum
 
@@ -172,6 +173,18 @@ class SpectrumNode(AbstractNode):
     def update_rpc(self):
         ''' No need to do anything '''
         pass
+
+    def is_device_supported(self, device_class_or_device_instance):
+        """ Returns False if a device is not supported for Spectrum nodes, True otherwise.
+        Currently, Bitcoin Core hot wallets are not supported """
+        # If a device class is passed as argument, take that, otherwise derive the class from the instance
+        if device_class_or_device_instance.__class__ == type:
+            device_class = device_class_or_device_instance
+        else:
+            device_class = device_class_or_device_instance.__class__
+        if device_class == BitcoinCore:
+           return False
+        return True
 
     def node_info_template(self):
         return "spectrum/components/spectrum_info.jinja"
