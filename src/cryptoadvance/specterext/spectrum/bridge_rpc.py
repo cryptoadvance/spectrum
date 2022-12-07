@@ -94,10 +94,7 @@ class BridgeRPC(BitcoinRPC):
                 f"Request error: {ve}", mock_response
             )
         except SpectrumRpcError as se:
-            mock_response = object()
-            mock_response.status_code = se.code
-            mock_response.text =se.message
-            raise SpecterRpcError(se.message, mock_response)
+            raise SpecterRpcError(str(se), status_code=500, error_code=se.code, error_msg=se.message)
              
 
     def __repr__(self) -> str:
