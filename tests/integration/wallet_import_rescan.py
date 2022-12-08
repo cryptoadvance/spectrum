@@ -74,7 +74,6 @@ def test_import_spectrum_nigiri_electrs_core(
     caplog.set_level(logging.INFO)
     # Can't be right here!
     spectrum_rpc: BitcoinRPC = BitcoinRPC(user="", password="", host="localhost", port="8081")
-    spectrum_node = SpectrumNode(host=host, port=port, ssl=ssl)
 
     btc_rpc: BitcoinRPC = BitcoinRPC(user="admin1", password="123", host="localhost", port="18443")
     runtest_import_via(spectrum_rpc, 
