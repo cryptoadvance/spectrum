@@ -1,8 +1,8 @@
-'''
+"""
 [![](https://mermaid.ink/img/pako:eNp9VMtuwjAQ_BXLpz7gB3Ks4NBTD1CVA1K02Eti4diRHxQU5d_rPAiJA80pnhl7Z8ebVJRpjjShTIK1KwGZgWKvSHh-QEp05G25JCu0zIjSadNR93VLb9rFbNcT-Hu7--rAThCBI-V2N9M1UAe2hnt11UGEvG-cESojCgocsIPWkpRGnMFhesKrTVHBQSKPd1mcY2Wo8qsNTy3Ivpd6bOAeRTUtCMyJc2RCKIdGgYyL8CjfwAQpUXhxqVAcLw8Kd6FUkw0j7air0TXEaA42nzEu5DSAHyL7DCczrY7CFKN8esKrOQWcG7T25XWwPTbeXPXUtrsIPgHO2rsJkKPIchfXhkJ75aYRS81ONyv1jeqesYnt7h8LfRCH5qxJQs-ttFon4qkzWEpg2EzbQKyVLwgLGWfaXJ-3_bjHgDbKI_bn1XRBCzQFCB4-4ranPXU5BiM0Ca8cj-DD4NK9aqS-5KHwmoswajQ5grS4oOCd3lwVo4kzHm-i_l_Qq-o_ZgxJhg)](https://mermaid-js.github.io/mermaid-live-editor/edit#pako:eNp9VMtuwjAQ_BXLpz7gB3Ks4NBTD1CVA1K02Eti4diRHxQU5d_rPAiJA80pnhl7Z8ebVJRpjjShTIK1KwGZgWKvSHh-QEp05G25JCu0zIjSadNR93VLb9rFbNcT-Hu7--rAThCBI-V2N9M1UAe2hnt11UGEvG-cESojCgocsIPWkpRGnMFhesKrTVHBQSKPd1mcY2Wo8qsNTy3Ivpd6bOAeRTUtCMyJc2RCKIdGgYyL8CjfwAQpUXhxqVAcLw8Kd6FUkw0j7air0TXEaA42nzEu5DSAHyL7DCczrY7CFKN8esKrOQWcG7T25XWwPTbeXPXUtrsIPgHO2rsJkKPIchfXhkJ75aYRS81ONyv1jeqesYnt7h8LfRCH5qxJQs-ttFon4qkzWEpg2EzbQKyVLwgLGWfaXJ-3_bjHgDbKI_bn1XRBCzQFCB4-4ranPXU5BiM0Ca8cj-DD4NK9aqS-5KHwmoswajQ5grS4oOCd3lwVo4kzHm-i_l_Qq-o_ZgxJhg)
 
 
-'''
+"""
 
 from flask_sqlalchemy import SQLAlchemy
 from embit.descriptor import Descriptor as EmbitDescriptor
@@ -20,17 +20,19 @@ from flask_sqlalchemy.model import BindMetaMixin, Model
 class NoNameMeta(BindMetaMixin, DeclarativeMeta):
     pass
 
+
 CustomModel = declarative_base(cls=Model, metaclass=NoNameMeta, name="Model")
 
 db = SQLAlchemy(model_class=CustomModel)
-#db = SQLAlchemy()
+# db = SQLAlchemy()
 
 
 class SpectrumModel(db.Model):
     __abstract__ = True
+
     @declared_attr
     def __tablename__(cls):
-        return 'spectrum_' + snake_case2camelcase(cls.__name__)
+        return "spectrum_" + snake_case2camelcase(cls.__name__)
 
 
 class TxCategory(Enum):
@@ -68,8 +70,11 @@ class Wallet(SpectrumModel):
 
 class Descriptor(SpectrumModel):
     """Descriptors tracked by the wallet"""
+
     id = db.Column(db.Integer, primary_key=True)
-    wallet_id = db.Column(db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False)
+    wallet_id = db.Column(
+        db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False
+    )
     wallet = db.relationship("Wallet", backref=db.backref("descriptors", lazy=True))
     # if we should use this descriptor for new addresses
     active = db.Column(db.Boolean, default=True)
@@ -109,11 +114,16 @@ class Descriptor(SpectrumModel):
 # We store script pubkeys instead of addresses as database is chain-agnostic
 class Script(SpectrumModel):
     id = db.Column(db.Integer, primary_key=True)
-    wallet_id = db.Column(db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False)
+    wallet_id = db.Column(
+        db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False
+    )
     wallet = db.relationship("Wallet", backref=db.backref("scripts", lazy=True))
     # this must be nullable as we may need to label external scripts
     descriptor_id = db.Column(
-        db.Integer, db.ForeignKey(f"{Descriptor.__tablename__}.id"), nullable=True, default=None
+        db.Integer,
+        db.ForeignKey(f"{Descriptor.__tablename__}.id"),
+        nullable=True,
+        default=None,
     )
     descriptor = db.relationship("Descriptor", backref=db.backref("scripts", lazy=True))
     # derivation index if it's our address
@@ -138,7 +148,7 @@ class Script(SpectrumModel):
         return EmbitScript(bytes.fromhex(self.script))
 
 
-class UTXO( SpectrumModel):
+class UTXO(SpectrumModel):
     id = db.Column(db.Integer, primary_key=True)
     txid = db.Column(db.String(64))
     vout = db.Column(db.Integer)
@@ -150,11 +160,13 @@ class UTXO( SpectrumModel):
     # refs
     script_id = db.Column(db.Integer, db.ForeignKey(f"{Script.__tablename__}.id"))
     script = db.relationship("Script", backref=db.backref("utxos", lazy=True))
-    wallet_id = db.Column(db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False)
+    wallet_id = db.Column(
+        db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False
+    )
     wallet = db.relationship("Wallet", backref=db.backref("utxos", lazy=True))
 
 
-class Tx( SpectrumModel):
+class Tx(SpectrumModel):
     id = db.Column(db.Integer, primary_key=True)
     txid = db.Column(db.String(64))
     blockhash = db.Column(db.String(64), default=None)
@@ -168,7 +180,9 @@ class Tx( SpectrumModel):
     # refs
     script_id = db.Column(db.Integer, db.ForeignKey(f"{Script.__tablename__}.id"))
     script = db.relationship("Script", backref=db.backref("txs", lazy=True))
-    wallet_id = db.Column(db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False)
+    wallet_id = db.Column(
+        db.Integer, db.ForeignKey(f"{Wallet.__tablename__}.id"), nullable=False
+    )
     wallet = db.relationship("Wallet", backref=db.backref("txs", lazy=True))
 
     def to_dict(self, blockheight, network):

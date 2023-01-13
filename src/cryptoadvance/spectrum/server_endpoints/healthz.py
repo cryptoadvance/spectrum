@@ -1,9 +1,6 @@
-import json,logging
+import json, logging
 
-from flask import (
-    Blueprint,
-    request
-)
+from flask import Blueprint, request
 
 from flask import current_app as app
 
@@ -11,9 +8,11 @@ logger = logging.getLogger(__name__)
 
 healthz = Blueprint("healthz", __name__)
 
+
 @healthz.route("/healthz/liveness")
 def liveness():
     return {"message": "i am alive"}
+
 
 @healthz.route("/healthz/readyness")
 def readyness():
