@@ -58,7 +58,7 @@ class ElectrumSocket:
                     req = self._requests.pop()
                     self._socket.sendall(json.dumps(req).encode() + b"\n")
                 except Exception as e:
-                    logger.error("Error in write", e)
+                    logger.error(f"Error in write: {e}")
                     handle_exception(e)
             time.sleep(0.01)
 
@@ -71,7 +71,7 @@ class ElectrumSocket:
                 tries = 0
             except Exception as e:
                 tries = tries + 1
-                logger.error("Error in ping", e)
+                logger.error(f"Error in ping {e}")
                 if tries > 10:
                     logger.fatal(
                         "Ping failure. I guess we lost the connection. What to do now?!"
@@ -115,7 +115,7 @@ class ElectrumSocket:
             try:
                 self._callback(data)
             except Exception as e:
-                logger.error("Error in callback:", e)
+                logger.error(f"Error in callback: {e}")
                 handle_exception(e)
         else:
             logger.debug("Notification:", data)
