@@ -542,6 +542,13 @@ class Spectrum:
         return [{"allowed": True} for tx in rawtxs]
 
     @rpc
+    def getrawtransaction(self, txid, verbose=False):
+        if verbose:
+            return self.sock.call("blockchain.transaction.get", [txid, True])
+        else:
+            return self.sock.call("blockchain.transaction.get", [txid, False])
+
+    @rpc    
     def sendrawtransaction(self, hexstring, maxfeerate=0.1):
         res = self.sock.call("blockchain.transaction.broadcast", [hexstring])
         if len(res) != 64:
