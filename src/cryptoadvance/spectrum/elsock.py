@@ -12,8 +12,11 @@ from .util import FlaskThread, SpectrumException, handle_exception
 
 logger = logging.getLogger(__name__)
 
+
 class ElectrumSocket:
-    def __init__(self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10):
+    def __init__(
+        self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10
+    ):
         logger.info(f"Initializing ElectrumSocket with {host}:{port} (ssl: {ssl})")
         self._host = host
         self._port = port
@@ -55,7 +58,7 @@ class ElectrumSocket:
                     req = self._requests.pop()
                     self._socket.sendall(json.dumps(req).encode() + b"\n")
                 except Exception as e:
-                    logger.error("Error in write", e)
+                    logger.error(f"Error in write: {e}")
                     handle_exception(e)
             time.sleep(0.01)
 
@@ -68,10 +71,11 @@ class ElectrumSocket:
                 tries = 0
             except Exception as e:
                 tries = tries + 1
-                logger.error("Error in ping", e)
+                logger.error(f"Error in ping {e}")
                 if tries > 10:
-                    logger.fatal("Ping failure. I guess we lost the connection. What to do now?!")
-                handle_exception(e)
+                    logger.fatal(
+                        "Ping failure. I guess we lost the connection. What to do now?!"
+                    )
 
     def recv_loop(self):
         while self.running:
@@ -85,7 +89,7 @@ class ElectrumSocket:
     def recv(self):
         while self.running:
             data = self._socket.recv(2048)
-            while not data.endswith(b"\n"): # b"\n" is the end of the message
+            while not data.endswith(b"\n"):  # b"\n" is the end of the message
                 data += self._socket.recv(2048)
             # data looks like this:
             # b'{"jsonrpc": "2.0", "result": {"hex": "...", "height": 761086}, "id": 2210736436}\n'
@@ -111,7 +115,7 @@ class ElectrumSocket:
             try:
                 self._callback(data)
             except Exception as e:
-                logger.error("Error in callback:", e)
+                logger.error(f"Error in callback: {e}")
                 handle_exception(e)
         else:
             logger.debug("Notification:", data)
@@ -121,18 +125,19 @@ class ElectrumSocket:
         obj = {"jsonrpc": "2.0", "method": method, "params": params, "id": uid}
         self._requests.append(obj)
         start = time.time()
-        
+
         while uid not in self._results:  # wait for response
-            #time.sleep(1)
+            # time.sleep(1)
             time.sleep(0.01)
             if time.time() - start > self._timeout:
-                raise SpectrumException(f"Timeout ({self._timeout} seconds) waiting for {method} on {self._socket}")
+                raise SpectrumException(
+                    f"Timeout ({self._timeout} seconds) waiting for {method} on {self._socket}"
+                )
         res = self._results.pop(uid)
         if "error" in res:
             raise ValueError(res["error"])
         if "result" in res:
             return res["result"]
-        
 
     def wait(self):
         self._waiting = True
@@ -141,12 +146,9 @@ class ElectrumSocket:
 
     def ping(self):
         start = time.time()
-        self.call("server.ping") # result None
+        self.call("server.ping")  # result None
         return time.time() - start
-
 
     def __del__(self):
         logger.info("Closing socket ...")
         self._socket.close()
-
-

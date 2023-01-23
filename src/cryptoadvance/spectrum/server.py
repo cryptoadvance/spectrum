@@ -11,6 +11,7 @@ from .server_endpoints.healthz import healthz
 
 logger = logging.getLogger(__name__)
 
+
 def create_app(config="cryptoadvance.spectrum.config.EmzyElectrumLiteConfig"):
     if os.environ.get("CONFIG"):
         config = os.environ.get("CONFIG")
@@ -18,6 +19,7 @@ def create_app(config="cryptoadvance.spectrum.config.EmzyElectrumLiteConfig"):
     app.config.from_object(config)
     logger.info(f"config: {config}")
     return app
+
 
 def init_app(app, datadir=None, standalone=True):
     # create folder if doesn't exist
@@ -30,15 +32,16 @@ def init_app(app, datadir=None, standalone=True):
     with app.app_context():
         db.create_all()
         app.logger.info("-------------------------CONFIGURATION-OVERVIEW------------")
-        app.logger.info("Config from "+os.environ.get("CONFIG","empty"))
+        app.logger.info("Config from " + os.environ.get("CONFIG", "empty"))
         for key, value in sorted(app.config.items()):
-            if key in ["DB_PASSWORD","SECRET_KEY","SQLALCHEMY_DATABASE_URI"]:
-                app.logger.info("{} = {}".format(key,"xxxxxxxxxxxx"))
+            if key in ["DB_PASSWORD", "SECRET_KEY", "SQLALCHEMY_DATABASE_URI"]:
+                app.logger.info("{} = {}".format(key, "xxxxxxxxxxxx"))
             else:
-                app.logger.info("{} = {}".format(key,value))
+                app.logger.info("{} = {}".format(key, value))
         app.logger.info("-----------------------------------------------------------")
         from cryptoadvance.spectrum.server_endpoints.core_api import core_api
         from .server_endpoints.healthz import healthz
+
         app.register_blueprint(core_api)
         app.register_blueprint(healthz)
 
