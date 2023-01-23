@@ -2,10 +2,7 @@ import logging
 from decimal import Decimal
 import json
 
-from flask import (
-    Blueprint,
-    request
-)
+from flask import Blueprint, request
 
 from flask import current_app as app
 
@@ -24,6 +21,7 @@ def index():
     if isinstance(data, list):
         return json.dumps([app.spectrum.jsonrpc(item) for item in data])
 
+
 @core_api.route("/wallet/", methods=["GET", "POST"])
 @core_api.route("/wallet/<path:wallet_name>", methods=["GET", "POST"])
 def walletrpc(wallet_name=""):
@@ -31,11 +29,8 @@ def walletrpc(wallet_name=""):
         return "JSONRPC server handles only POST requests"
     data = request.get_json()
     if isinstance(data, dict):
-        return json.dumps(
-            app.spectrum.jsonrpc(data, wallet_name=wallet_name)
-        )
+        return json.dumps(app.spectrum.jsonrpc(data, wallet_name=wallet_name))
     if isinstance(data, list):
         return json.dumps(
             [app.spectrum.jsonrpc(item, wallet_name=wallet_name) for item in data]
         )
-

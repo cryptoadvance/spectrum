@@ -39,6 +39,7 @@ def test_importdescriptor(app: Flask, rootkey_hold_accident, acc0key0addr_hold_a
         assert len(descriptor) == 1
         descriptor = descriptor[0]
         logger.info(f"TEST: descriptor {descriptor}")
+        assert spectrum.getbalances(wallet) == {'mine': {'immature': 0.0, 'trusted': 0.0, 'untrusted_pending': 0.0}, 'watchonly': {'immature': 0.0, 'trusted': 0.0, 'untrusted_pending': 0.0}}
         # Load the script with index 0
         script: Script = Script.query.filter_by(wallet=wallet, index=0).all() # could use first() but let's assert!
         assert len(script) == 1
