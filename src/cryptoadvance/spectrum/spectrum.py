@@ -542,6 +542,28 @@ class Spectrum:
         return [{"allowed": True} for tx in rawtxs]
 
     @rpc
+    def getrawtransaction(self, txid, verbose=False):
+        """
+        Get raw transaction data for a given transaction id.
+        For more information on the Bitcoin RPC call see: https://developer.bitcoin.org/reference/rpc/getrawtransaction.html
+        
+        Parameters:
+        - txid (str): The transaction id of the transaction you want to retrieve.
+        - verbose (bool): Indicates whether to return detailed information about the transaction. Default is False.
+    
+        Returns:
+        - dict: If verbose is set to True, it returns detailed information about the transaction specified by txid,
+            otherwise it returns only the transaction data.
+        Implementation details:
+        - This method is using the ElectrumX API call `blockchain.transaction.get` which is documented here:
+            https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-transaction-get
+        """
+        if verbose:
+            return self.sock.call("blockchain.transaction.get", [txid, True])
+        else:
+            return self.sock.call("blockchain.transaction.get", [txid, False])
+
+    @rpc    
     def sendrawtransaction(self, hexstring, maxfeerate=0.1):
         res = self.sock.call("blockchain.transaction.broadcast", [hexstring])
         if len(res) != 64:
