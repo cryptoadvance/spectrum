@@ -158,14 +158,17 @@ class Spectrum:
             logger.info(f"Syncing ... {self.sock}")
         subscription_logging_counter = 0
         # subscribe to all scripts
-        for sc in Script.query.all():
+        all_scripts = Script.query.all()
+        all_scripts_len = len(all_scripts)
+        for sc in all_scripts:
             # ignore external scripts (labeled recepients)
             if sc.index is None:
                 continue
             subscription_logging_counter += 1
             if subscription_logging_counter % 100 == 0:
+                progress_percent = subscription_logging_counter / all_scripts_len * 100
                 logger.info(
-                    f"Now subscribed to {subscription_logging_counter} scripthashes"
+                    f"Now subscribed to {subscription_logging_counter} scripthashes ({int(progress_percent)}%)"
                 )
 
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
