@@ -577,7 +577,7 @@ class Spectrum:
         return [{"allowed": True} for tx in rawtxs]
 
     @rpc
-    def getrawtransaction(self, txid, verbose=False):
+    def getrawtransaction(self, blockhash, txid, verbose=False):
         """
         Get raw transaction data for a given transaction id.
         For more information on the Bitcoin RPC call see: https://developer.bitcoin.org/reference/rpc/getrawtransaction.html
