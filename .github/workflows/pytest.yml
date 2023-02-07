@@ -26,7 +26,8 @@ jobs:
       - name: Install dependencies
         run: |
           # --no-deps to avoid chicken egg problem as we're testing against specter which in turn depends on spectrum
-          pip3 install -e ".[test]" --no-deps 
+          pip3 install -e 
+          pip3 install ".[test]" --no-deps 
       - name: pytest
         run: |
           pytest
