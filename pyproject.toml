@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=45", "setuptools_scm[toml]>=6.2"
+    "setuptools>=45", "setuptools_scm[toml]>=6.2", "babel"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -15,7 +15,7 @@ description = "Implements A Bitcoin Core API which querying an Electrum"
 urls = { Homepage = "https://github.com/cryptoadvance/spectrum" }
 readme = "README.md"
 
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 license = {file = "LICENSE"}
 
