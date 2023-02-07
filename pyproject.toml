@@ -42,7 +42,7 @@ dynamic=["version"]
 write_to = "src/cryptoadvance/spectrum/_version.py"
 
 [tool.pytest.ini_options]
-norecursedirs = "tests/bitcoin*"
+norecursedirs = "tests/bintegration"
 log_format = "[%(levelname)8s] %(message)s %(name)s (%(filename)s:%(lineno)s)"
 markers = [
     "slow: mark test as slow.",
