@@ -30,4 +30,3 @@ def test_bdk():
     xpub = acc0xprv_keen_join.as_public()
     print(f"Keen Join acc0xpub: {xpub.as_string()}")
     # tpubDCNx731HhXWZH7JigBeqN5F8T23pwrw7ny4v66b7XFajEF4Xwu1tHc4avQRVofghtzUs5BVNjYwRcqyfiBzftmfRFMKBWVCVdhQTWM1b7wM
-    assert False

@@ -41,9 +41,25 @@ dynamic=["version"]
 [tool.setuptools_scm]
 write_to = "src/cryptoadvance/spectrum/_version.py"
 
+[tool.pytest.ini_options]
+norecursedirs = "tests/bitcoin*"
+log_format = "[%(levelname)8s] %(message)s %(name)s (%(filename)s:%(lineno)s)"
+markers = [
+    "slow: mark test as slow.",
+    "elm: mark test as elementsd dependent",
+]
+
+filterwarnings = [
+    "ignore::DeprecationWarning:bitbox02[.*]"
+]
+
+
 [project.optional-dependencies]
 test = [
   "pytest >=7.1.3",
   "pytest-cov[all]",
-  "Mock"
+  "mock",
+  "black",
+  "pre-commit",
+  "bdkpython"
 ]
