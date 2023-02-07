@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip3 install -e .
-          pip3 install ".[test]" || true 
+          pip3 install ".[test]"
       - name: pytest
         run: |
           pytest 

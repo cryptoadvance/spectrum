@@ -26,8 +26,8 @@ jobs:
           python3 -m pip install --upgrade pip
       - name: Install dependencies
         run: |
-          pip3 install -r requirements.txt && pip3 install -r test_requirements.txt
           pip3 install -e .
+          pip3 install ".[test]"
       - name: Run Nigiri
         uses: vulpemventures/nigiri-github-action@v1
         with:
