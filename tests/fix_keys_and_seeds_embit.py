@@ -6,9 +6,15 @@ from embit.bip39 import mnemonic_to_seed
 from embit.bip32 import HDKey, NETWORKS
 from embit import script
 
+from bdkpython import bdk
+import bdkpython as bdk
+
 mnemonic_ghost_machine = (
     "ghost ghost ghost ghost ghost ghost ghost ghost ghost ghost ghost machine"
 )
+
+
+seed = bdk.Mnemonic.from_string(mnemonic_ghost_machine)
 
 
 @pytest.fixture
@@ -18,7 +24,7 @@ def mnemonic_keen_join():
 
 @pytest.fixture
 def seed_keen_join(mnemonic_keen_join):
-    seed = mnemonic_to_seed(mnemonic_keen_join)
+    seed = bdk.Mnemonic.from_string(mnemonic_ghost_machine)
     print(f"Keen Join seed: {hexlify(seed)}")
     return mnemonic_to_seed(mnemonic_keen_join)
 
@@ -162,48 +168,3 @@ def key_hold_accident(acc0key0pubkey_hold_accident):
     print(address)  # m/84'/1'/0'/0/0
     # tb1qnwc84tkupy5v0tzgt27zkd3uxex3nmyr6vfhdd
     return address
-
-
-@pytest.fixture
-def acc0key_hold_accident(acc0xpub_hold_accident, rootkey_hold_accident: HDKey):
-
-    key: Key = Key(
-        acc0xpub_hold_accident.to_base58(
-            version=NETWORKS["test"]["xpub"]
-        ),  # original (ToDo: better original)
-        hexlify(rootkey_hold_accident.my_fingerprint).decode("utf-8"),  # fingerprint
-        "m/84h/1h/0h",  # derivation
-        "wpkh",  # key_type
-        "Muuh",  # purpose
-        acc0xpub_hold_accident.to_base58(version=NETWORKS["test"]["xpub"]),  # xpub
-    )
-    mydict = key.json
-    print(json.dumps(mydict))
-
-    return key
-
-
-# random other keys
-
-
-@pytest.fixture
-def a_key():
-    a_key = Key(
-        "Vpub5n9kKePTPPGtw3RddeJWJe29epEyBBcoHbbPi5HhpoG2kTVsSCUzsad33RJUt3LktEUUPPofcZczuudnwR7ZgkAkT6N2K2Z7wdyjYrVAkXM",
-        "08686ac6",
-        "m/48h/1h/0h/2h",
-        "wsh",
-        "",
-        "tpubDFHpKypXq4kwUrqLotPs6fCic5bFqTRGMBaTi9s5YwwGymE8FLGwB2kDXALxqvNwFxB1dLWYBmmeFVjmUSdt2AsaQuPmkyPLBKRZW8BGCiL",
-    )
-    return a_key
-
-
-@pytest.fixture
-def a_tpub_only_key():
-    a_tpub_only_key = Key.from_json(
-        {
-            "original": "tpubDDZ5jjGT5RvrAyjoLZfdCfv1PAPmicnhNctwZGKiCMF1Zy5hCGMqppxwYZzWgvPqk7LucMMHo7rkB6Dyj5ZLd2W62FAEP3U6pV4jD5gb9ma"
-        }
-    )
-    return a_tpub_only_key

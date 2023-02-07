@@ -34,5 +34,5 @@ jobs:
           use_liquid: false
       - name: Run integration tests
         run: |
-          pytest tests/integration/wallet_import_rescan.py
+          pytest tests/integration/test_basics.py
         

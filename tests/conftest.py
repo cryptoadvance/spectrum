@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 pytest_plugins = [
     # "fix_infrastructure",
-    "fix_keys_and_seeds"
+    "fix_keys_and_seeds_embit"
 ]
 
 # This is from https://stackoverflow.com/questions/132058/showing-the-stack-trace-from-a-running-python-application
