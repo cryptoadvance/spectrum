@@ -9,13 +9,10 @@ import traceback
 from binascii import hexlify
 import pytest
 
-from cryptoadvance.specter.key import Key
-from cryptoadvance.specter.persistence import PersistentObject
+from cryptoadvance.spectrum.util_specter import setup_logging
 from cryptoadvance.spectrum.cli import setup_logging
 from cryptoadvance.spectrum.config import TestConfig
 from cryptoadvance.spectrum.server import create_app, init_app
-from cryptoadvance.specterext.spectrum.spectrum_node import SpectrumNode
-
 from embit import script
 from embit.bip32 import NETWORKS, HDKey
 from embit.bip39 import mnemonic_to_seed
@@ -28,7 +25,7 @@ from fix_infrastructure import MockServer
 logger = logging.getLogger(__name__)
 
 pytest_plugins = [
-    #"fix_infrastructure",
+    # "fix_infrastructure",
     "fix_keys_and_seeds"
 ]
 
@@ -86,11 +83,13 @@ def pytest_addoption(parser):
     )
     listen()
 
+
 @pytest.fixture
 def empty_data_folder():
     # Make sure that this folder never ever gets a reasonable non-testing use-case
     with tempfile.TemporaryDirectory(prefix="specter_home_tmp_") as data_folder:
         yield data_folder
+
 
 def spectrum_app_with_config(config={}):
     """helper-function to create SpectrumFlasks"""
@@ -120,34 +119,48 @@ def spectrum_app_with_config(config={}):
         init_app(app, standalone=True)
         return app
 
+
 @pytest.fixture
 def config(request):
-    # Creates a class out of a fully qualified Class as string 
+    # Creates a class out of a fully qualified Class as string
     try:
         mytype = import_string(request.config.getoption("config"))
     except ImportStringError as e:
-        raise Exception("""
+        raise Exception(
+            """
             Module not found. Try:
             --config cryptoadvance.spectrum.config.TestConfig (default) or
             --config cryptoadvance.spectrum.config.EmzyElectrumLiteConfig
-        """)
+        """
+        )
         raise e
     return mytype
+
 
 @pytest.fixture
 def app() -> Flask:
     """the Flask-App, but uninitialized"""
     return spectrum_app_with_config(config="cryptoadvance.spectrum.config.TestConfig")
 
+
 @pytest.fixture
 def app_offline() -> Flask:
-    """ provoke an offline spectrum by passing a closed port """
-    return spectrum_app_with_config(config={"ELECTRUM_PORT": "localhost", "ELECTRUM_PORT": 30011, "ELECTRUM_USES_SSL":False}) 
+    """provoke an offline spectrum by passing a closed port"""
+    return spectrum_app_with_config(
+        config={
+            "ELECTRUM_PORT": "localhost",
+            "ELECTRUM_PORT": 30011,
+            "ELECTRUM_USES_SSL": False,
+        }
+    )
+
 
 @pytest.fixture
 def app_nigiri() -> Flask:
     """the Flask-App, but uninitialized"""
-    server = MockServer(spectrum_app_with_config(config="cryptoadvance.spectrum.config.TestConfig"))
+    server = MockServer(
+        spectrum_app_with_config(config="cryptoadvance.spectrum.config.TestConfig")
+    )
     server.start()
     yield server
     server.shutdown_server()
@@ -158,20 +171,20 @@ def client(app):
     """a test_client from an initialized Flask-App"""
     return app.test_client()
 
+
 @pytest.fixture
 def spectrum_node():
-    """ A Spectrum node """
-    node_dict= {
+    """A Spectrum node"""
+    node_dict = {
         "python_class": "cryptoadvance.specterext.spectrum.spectrum_node.SpectrumNode",
         "name": "Spectrum Node",
         "alias": "spectrum_node",
         "host": "electrum.emzy.de",
         "port": 5002,
-        "ssl": True
+        "ssl": True,
     }
 
     # Instantiate via PersistentObject:
     sn = PersistentObject.from_json(node_dict)
     assert type(sn) == SpectrumNode
     return sn
-

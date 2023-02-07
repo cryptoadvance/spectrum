@@ -1,7 +1,6 @@
 from binascii import hexlify
 import json
 import pytest
-from cryptoadvance.specter.key import Key
 
 from embit.bip39 import mnemonic_to_seed
 from embit.bip32 import HDKey, NETWORKS
@@ -11,9 +10,11 @@ mnemonic_ghost_machine = (
     "ghost ghost ghost ghost ghost ghost ghost ghost ghost ghost ghost machine"
 )
 
+
 @pytest.fixture
 def mnemonic_keen_join():
     return 11 * "keen " + "join"
+
 
 @pytest.fixture
 def seed_keen_join(mnemonic_keen_join):
@@ -27,7 +28,7 @@ def rootkey_keen_join(seed_keen_join):
     rootkey = HDKey.from_seed(seed_keen_join)
     print(f"Keen Join rootkey: {rootkey.to_base58()}")
     # xprv9s21ZrQH143K3LEXAFcSsTmDGYrgbRs62sNyv1GMwFFwxQDVC3hQZK7LRDUBknzKnN8iT6RxRt9zSibY3qLrnrfTRTw1LtmBSdZJwfLAgK1
-    print(f"Keen Join rootkey fp: {hexlify(rootkey.my_fingerprint)}") # dcbf0caf
+    print(f"Keen Join rootkey fp: {hexlify(rootkey.my_fingerprint)}")  # dcbf0caf
     return rootkey
 
 
@@ -89,7 +90,6 @@ def acc0key_keen_join(acc0xpub_keen_join, rootkey_keen_join: HDKey):
     print(json.dumps(mydict))
 
     return key
-
 
 
 # hold hold hold hold hold hold hold hold hold hold hold accident
