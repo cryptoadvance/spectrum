@@ -27,7 +27,8 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           pip3 install -r test_requirements.txt
-          pip3 install -e ".[test]"
+          # --no-deps to avoid chicken egg problem as we're testing against specter which in turn depends on spectrum
+          pip3 install -e ".[test]" --no-deps 
       - name: pytest
         run: |
           pytest
