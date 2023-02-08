@@ -227,10 +227,12 @@ function build() {
 function publish() {
     python3 -m pip install --upgrade twine > /dev/null
     echo "    --> Publishing the package for version $new_version"
+    new_version_pypi = $(echo "$new_version" | sed -e 's/v//')
+
     if [ -z $DEV ]; then
-        python3 -m twine upload dist/cryptoadvance.spectrum-${new_version}*
+        python3 -m twine upload dist/cryptoadvance.spectrum-${new_version_pypi}*
     else
-        python3 -m twine upload --repository testpypi dist/cryptoadvance.spectrum-${new_version}*
+        python3 -m twine upload --repository testpypi dist/cryptoadvance.spectrum-${new_version_pypi}*
     fi
 }
 
@@ -238,7 +240,9 @@ function release() {
     echo "    --> We'll do now the tag"
     tag
     echo "    --> git checkout $new_version"
-    git checkout $new_version
+    # This is not necessary!
+    # The build-script will check whether the commit is the vorrect one
+    # git checkout $new_version
     echo "    --> Creating the build"
     build
     echo "    --> Publish to pypi"
