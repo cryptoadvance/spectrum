@@ -26,4 +26,6 @@ def test_getblockchaininfo(caplog):
         user="admin1", password="123", host="localhost", port="18443"
     )
     result = rpc.getblockchaininfo()
-    assert result == None
+    assert result["blocks"] == 101
+    assert result["chain"] == "regtest"
+    assert result["chainwork"].startswith("000000000")
