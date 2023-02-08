@@ -1,5 +1,0 @@
-black
-pytest
-pre-commit
-mock
-cryptoadvance.specter

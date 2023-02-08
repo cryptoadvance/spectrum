@@ -12,7 +12,7 @@ from enum import Enum
 import time
 from .util import sat_to_btc
 from sqlalchemy.ext.declarative import declared_attr
-from cryptoadvance.specter.util.common import snake_case2camelcase
+from cryptoadvance.spectrum.util_specter import snake_case2camelcase
 from sqlalchemy.orm import DeclarativeMeta, declarative_base
 from flask_sqlalchemy.model import BindMetaMixin, Model
 

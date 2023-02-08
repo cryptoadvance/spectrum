@@ -150,7 +150,28 @@ class Spectrum:
     def txdir(self):
         return os.path.join(self.datadir, "txs")
 
+    @property
+    def progress_percent(self):
+        """This reflects the sync-progress of the _sync-method. It'll be returned in the
+        verificationprogress of getblockchaininfo
+        """
+        if hasattr(self, "_progress_percent"):
+            return self._progress_percent
+        else:
+            return 0
+
+    @progress_percent.setter
+    def progress_percent(self, value):
+        """Will be called from the sync-progress only"""
+        self._progress_percent = int(value)
+
     def _sync(self):
+        """This code is checking if the self.sock variable is not set (offline-mode)
+        and if it is, it subscribes to all scripts and checks if the state of the
+        script matches the response from the subscription. If they don't match,
+        it calls a sync_script function to update the state. It also logs progress
+        every 100 scripts subscribed to and updates self.progress_percent
+        """
         if not self.sock:
             logger.info("Not Syncing in offline-mode ...")
             return
@@ -167,6 +188,7 @@ class Spectrum:
             subscription_logging_counter += 1
             if subscription_logging_counter % 100 == 0:
                 progress_percent = subscription_logging_counter / all_scripts_len * 100
+                self.progress_percent = int(progress_percent)
                 logger.info(
                     f"Now subscribed to {subscription_logging_counter} scripthashes ({int(progress_percent)}%)"
                 )
@@ -325,6 +347,7 @@ class Spectrum:
         method = data["method"]
         params = data["params"]
         if method == "blockchain.headers.subscribe":
+            logger.info(params)
             self.blocks = params[0]["height"]
             self.bestblockhash = get_blockhash(params[0]["hex"])
         if method == "blockchain.scripthash.subscribe":
@@ -414,8 +437,8 @@ class Spectrum:
             "mediantime": int(
                 time.time()
             ),  # TODO: we can get it from block header if we need it
-            "verificationprogress": 1,
-            "initialblockdownload": False,
+            "verificationprogress": self.progress_percent / 100,
+            "initialblockdownload": self.progress_percent != 100,
             "chainwork": "00",  # ???
             "size_on_disk": 0,
             "pruned": False,
@@ -581,11 +604,11 @@ class Spectrum:
         """
         Get raw transaction data for a given transaction id.
         For more information on the Bitcoin RPC call see: https://developer.bitcoin.org/reference/rpc/getrawtransaction.html
-        
+
         Parameters:
         - txid (str): The transaction id of the transaction you want to retrieve.
         - verbose (bool): Indicates whether to return detailed information about the transaction. Default is False.
-    
+
         Returns:
         - dict: If verbose is set to True, it returns detailed information about the transaction specified by txid,
             otherwise it returns only the transaction data.
@@ -598,7 +621,7 @@ class Spectrum:
         else:
             return self.sock.call("blockchain.transaction.get", [txid, False])
 
-    @rpc    
+    @rpc
     def sendrawtransaction(self, hexstring, maxfeerate=0.1):
         res = self.sock.call("blockchain.transaction.broadcast", [hexstring])
         if len(res) != 64:

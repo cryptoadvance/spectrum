@@ -1,6 +1,9 @@
 name: Run Python tests
 
-on: [push]
+on: 
+  push:
+  pull_request:
+    branches: [master]
 
 jobs:
   build:
@@ -8,9 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
 
     steps:
+      # This action provides the following functionality for GitHub Actions users:
+      # * Installing a version of Python or PyPy and (by default) adding it to the PATH
+      # * Optionally caching dependencies for pip, pipenv and poetry
+      # * Registering problem matchers for error output
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v3
@@ -18,10 +25,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip3 install -r requirements.txt
-          pip3 install -r test_requirements.txt
           pip3 install -e .
-          pip3 install pytest pytest-md pytest-emoji
+          pip3 install ".[test]"
       - name: pytest
         run: |
-          pytest
+          pytest 

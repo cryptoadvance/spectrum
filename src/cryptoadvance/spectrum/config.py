@@ -6,7 +6,7 @@ import os
 import secrets
 from pathlib import Path
 
-from cryptoadvance.specter.config import _get_bool_env_var
+from cryptoadvance.spectrum.util_specter import _get_bool_env_var
 
 logger = logging.getLogger(__name__)
 
