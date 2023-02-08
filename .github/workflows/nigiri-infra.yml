@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
 
     steps:
       - name: Check out repository code
@@ -26,13 +26,13 @@ jobs:
           python3 -m pip install --upgrade pip
       - name: Install dependencies
         run: |
-          pip3 install -r requirements.txt && pip3 install -r test_requirements.txt
           pip3 install -e .
+          pip3 install ".[test]"
       - name: Run Nigiri
         uses: vulpemventures/nigiri-github-action@v1
         with:
           use_liquid: false
       - name: Run integration tests
         run: |
-          pytest tests/integration/wallet_import_rescan.py
+          pytest tests/integration/basics.py
         

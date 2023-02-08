@@ -1,5 +1,65 @@
 [build-system]
 requires = [
-    "cryptoadvance.specter==1.13.0"
+    "setuptools>=45", "setuptools_scm[toml]>=6.2", "babel"
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "cryptoadvance.spectrum"
+
+authors = [
+  { name="Stepan Snigirev"},
+  { name="k9ert"},
+]
+description = "Implements A Bitcoin Core API which querying an Electrum"
+
+urls = { Homepage = "https://github.com/cryptoadvance/spectrum" }
+readme = "README.md"
+license = {file = "LICENSE"}
+
+
+requires-python = ">=3.10"
+
+dependencies = [
+  'embit==0.6.1', 
+  'Flask==2.1.1', 
+  'Flask-SQLAlchemy==2.5.1',
+  'sqlalchemy==1.4.42',
+  'psycopg2-binary', 
+  'requests==2.26.0'
+]
+
+
+classifiers =[
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
+    'Framework :: Flask',
+]
+dynamic=["version"]
+
+[tool.setuptools_scm]
+write_to = "src/cryptoadvance/spectrum/_version.py"
+
+[tool.pytest.ini_options]
+norecursedirs = "tests/bintegration"
+log_format = "[%(levelname)8s] %(message)s %(name)s (%(filename)s:%(lineno)s)"
+markers = [
+    "slow: mark test as slow.",
+    "elm: mark test as elementsd dependent",
+]
+
+filterwarnings = [
+    "ignore::DeprecationWarning:bitbox02[.*]"
+]
+
+
+[project.optional-dependencies]
+test = [
+  "pytest >=7.1.3",
+  "pytest-cov[all]",
+  "mock",
+  "black",
+  "pre-commit",
+  "bdkpython"
+]

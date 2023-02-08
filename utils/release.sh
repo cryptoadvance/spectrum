@@ -202,31 +202,9 @@ function main() {
 
 }
 
-function set() {
-    echo "    --> set the correct version in the setup.py"
-    new_version_pypi_comp=$(echo $new_version | sed 's/v//')
-    sed -i "s/version=.*/version=\"$new_version_pypi_comp\",/" setup.py
-    echo "    --> result:"
-    cat setup.py | grep version
-}
-
-function commit() {
-    if ! git status --porcelain | grep setup.py ; then
-        echo "setup.py has not been modified!"
-        exit 1
-    fi
-    if [[ $(git status --porcelain | wc -l) -ne 1 ]]; then
-        echo "setup.py needs to be the only change!"
-        exit 1
-    fi
-    echo "    --> adding setup.py"
-    git add setup.py
-    echo "    --> committing"
-    git commit -m "version $new_version"
-}
-
 function build() {
     echo "    --> Building the package for version $new_version"
+    rm -rf dist
     python3 -m pip install --upgrade build
     python3 -m build
     echo "    --> Done"
@@ -243,9 +221,8 @@ function publish() {
 }
 
 function release() {
-    set
-    commit
     tag
+    git checkout $new_version
     build
     publish
 }
