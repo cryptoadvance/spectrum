@@ -11,6 +11,7 @@ import traceback
 from functools import wraps
 
 from embit import bip32
+from embit.base import EmbitError
 from embit.descriptor import Descriptor as EmbitDescriptor
 from embit.descriptor.checksum import add_checksum
 from embit.finalizer import finalize_psbt
@@ -983,7 +984,10 @@ class Spectrum:
 
     @walletrpc
     def getreceivedbyaddress(self, wallet, address, minconf=1):
-        sc = EmbitScript.from_address(address)
+        try:
+            sc = EmbitScript.from_address(address)
+        except EmbitError as e:
+            raise Spectrum.RPCError(f"Invalid Bitcoin address: {address}") from e
         script = Script.query.filter_by(script=sc.data.hex()).first()
         if not script:
             return 0
