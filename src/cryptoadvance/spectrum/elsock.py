@@ -21,16 +21,19 @@ class ElectrumSocket:
                 raise TypeError("self._host should be a string.")
         except TypeError as e:
             logger.error(f"Host type error: {e}")
+            handle_exception(e)
         try:
             if not isinstance(self._port, int):
                 raise TypeError("self._port should be an integer.")
         except TypeError as e:
             logger.error(f"Port type error: {e}")
+            handle_exception(e)
         try:
             if not isinstance(use_ssl, bool):
                 raise TypeError("use_ssl should be a bool.")
         except TypeError as e:
             logger.error(f"use_ssl type error: {e}")
+            handle_exception(e)
         self.running = True
         self._callback = callback
         self._timeout = timeout
