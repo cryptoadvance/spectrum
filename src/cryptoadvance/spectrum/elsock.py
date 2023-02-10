@@ -1,38 +1,48 @@
 import logging
-import socket
 import ssl
 import json
 import random
 import time
 import threading
 import sys
+import websocket
 from .util import FlaskThread, SpectrumException, handle_exception
 
-# TODO: normal handling of ctrl+C interrupt
 
 logger = logging.getLogger(__name__)
 
-
 class ElectrumSocket:
-    def __init__(
-        self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10
-    ):
+    def __init__(self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10):
         logger.info(f"Initializing ElectrumSocket with {host}:{port} (ssl: {ssl})")
         self._host = host
         self._port = port
-        assert type(self._host) == str
-        assert type(self._port) == int
-        assert type(use_ssl) == bool
+        try:
+            if not isinstance(self._host, str):
+                raise TypeError("self._host should be a string.")
+        except TypeError as e:
+            logger.error(f"Host type error: {e}")
+        try:
+            if not isinstance(self._port, int):
+                raise TypeError("self._port should be an integer.")
+        except TypeError as e:
+            logger.error(f"Port type error: {e}")
+        try:
+            if not isinstance(use_ssl, bool):
+                raise TypeError("use_ssl should be a bool.")
+        except TypeError as e:
+            logger.error(f"use_ssl type error: {e}")
         self.running = True
         self._callback = callback
         self._timeout = timeout
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket = websocket.WebSocket()
         if use_ssl:
-            self._socket = ssl.wrap_socket(self._socket)
+            self._socket.connect("wss://{}:{}".format(host, port), sslopt={"cert_reqs": ssl.CERT_NONE})
+        else:
+            self._socket.connect("ws://{}:{}".format(host, port))
         self._socket.settimeout(5)
         self._socket.connect((host, port))
         self._socket.settimeout(None)
-        self._results = {}  # store results of the calls here
+        self._results = {} # store results of the calls here
         self._requests = []
         self._notifications = []
         logger.info("Starting ElectrumSocket Threads ...")
@@ -48,7 +58,6 @@ class ElectrumSocket:
         self._notify_thread = FlaskThread(target=self.notify_loop)
         self._notify_thread.daemon = True
         self._notify_thread.start()
-        logger.info("Finished starting ElectrumSocket Threads")
         self._waiting = False
 
     def write_loop(self):
@@ -56,7 +65,7 @@ class ElectrumSocket:
             while self._requests:
                 try:
                     req = self._requests.pop()
-                    self._socket.sendall(json.dumps(req).encode() + b"\n")
+                    self._socket.send(json.dumps(req).encode() + b"\n")
                 except Exception as e:
                     logger.error(f"Error in write: {e}")
                     handle_exception(e)
@@ -74,7 +83,7 @@ class ElectrumSocket:
                 logger.error(f"Error in ping {e}")
                 if tries > 10:
                     logger.fatal(
-                        "Ping failure. I guess we lost the connection. What to do now?!"
+                        "Ping failure. I guess we lost the connection. Now What?!"
                     )
 
     def recv_loop(self):
@@ -89,7 +98,7 @@ class ElectrumSocket:
     def recv(self):
         while self.running:
             data = self._socket.recv(2048)
-            while not data.endswith(b"\n"):  # b"\n" is the end of the message
+            while not data.endswith(b"\n"): # b"\n" is the end of the message
                 data += self._socket.recv(2048)
             # data looks like this:
             # b'{"jsonrpc": "2.0", "result": {"hex": "...", "height": 761086}, "id": 2210736436}\n'
@@ -99,7 +108,7 @@ class ElectrumSocket:
             for response in arr:
                 if "method" in response:  # notification
                     self._notifications.append(response)
-                if "id" in response:  # request
+                if "id" in response: # request
                     self._results[response["id"]] = response
 
     def notify_loop(self):
@@ -110,7 +119,7 @@ class ElectrumSocket:
             time.sleep(0.02)
 
     def notify(self, data):
-        self._waiting = False  # any notification resets waiting
+        self._waiting = False # any notification resets waiting
         if self._callback:
             try:
                 self._callback(data)
@@ -146,7 +155,7 @@ class ElectrumSocket:
 
     def ping(self):
         start = time.time()
-        self.call("server.ping")  # result None
+        self.call("server.ping") # result none
         return time.time() - start
 
     def __del__(self):
