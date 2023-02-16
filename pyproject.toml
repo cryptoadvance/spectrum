@@ -20,23 +20,16 @@ license = {file = "LICENSE"}
 
 requires-python = ">=3.10"
 
-dependencies = [
-  'embit==0.6.1', 
-  'Flask==2.1.1', 
-  'Flask-SQLAlchemy==2.5.1',
-  'sqlalchemy==1.4.42',
-  'psycopg2-binary', 
-  'requests==2.26.0'
-]
-
-
 classifiers =[
     'Programming Language :: Python :: 3',
     'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent',
     'Framework :: Flask',
 ]
-dynamic=["version"]
+dynamic=["version", "version"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.in"]}
 
 [tool.setuptools_scm]
 write_to = "src/cryptoadvance/spectrum/_version.py"
