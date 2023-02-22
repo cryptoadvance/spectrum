@@ -23,7 +23,7 @@ class ElectrumSocket:
 
     tries_threshold = 3  # how many tries the ping might fail before it's giving up
     sleep_ping_loop = 10  # seconds
-    sleep_recv_loop = 0.1  # seconds
+    sleep_recv_loop = 0.01  # seconds
     sleep_write_loop = 0.01
     timeout = 10  # seconds for the call method
 
@@ -58,7 +58,7 @@ class ElectrumSocket:
         assert type(self._use_ssl) == bool
         self.running = True
         self._callback = callback
-        self._socket_recreation_callback = socket_recreation_callback
+        self._on_recreation_callback = socket_recreation_callback
         self._timeout = timeout if timeout else self.__class__.timeout
         self._establish_socket()
         self._results = {}  # store results of the calls here
@@ -141,15 +141,15 @@ class ElectrumSocket:
             self._create_threads()
             assert not self.is_socket_closed()
             if (
-                hasattr(self, "_socket_recreation_callback")
-                and self._socket_recreation_callback is not None
+                hasattr(self, "_on_recreation_callback")
+                and self._on_recreation_callback is not None
             ):
                 logger.debug(
-                    f"calling self._socket_recreation_callback {self._socket_recreation_callback.__name__}"
+                    f"calling self._on_recreation_callback {self._on_recreation_callback.__name__}"
                 )
-                self._socket_recreation_callback()
+                self._on_recreation_callback()
             else:
-                logger.debug("No reasonable _socket_recreation_callback found")
+                logger.debug("No reasonable _on_recreation_callback found")
 
     def _write_loop(self):
         """

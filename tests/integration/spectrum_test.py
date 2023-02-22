@@ -116,7 +116,7 @@ def test_spectrum_resilience(caplog, empty_data_folder, rootkey_hold_accident):
     [   INFO] in          elsock: Started bg thread for _ping_loop
     [  DEBUG] in            util: starting new FlaskThread: _notify_loop
     [   INFO] in          elsock: Started bg thread for _notify_loop
-    [  DEBUG] in          elsock: calling self._socket_recreation_callback _sync
+    [  DEBUG] in          elsock: calling self._on_recreation_callback _sync
     [   INFO] in        spectrum: Syncing ... <cryptoadvance.spectrum.elsock.ElectrumSocket object at 0x7ff786dc4850>
     [   INFO] in   spectrum_test: 2023-02-22 15:52:48.997232 Let's sleep for 5 seconds
     [   INFO] in        spectrum: Now subscribed to 100 scripthashes (33%)
@@ -124,9 +124,6 @@ def test_spectrum_resilience(caplog, empty_data_folder, rootkey_hold_accident):
 
     """
     caplog.set_level(logging.DEBUG)
-
-    def callback(something):
-        print(something)
 
     # Speed up the test ...
     ElectrumSocket.tries_threshold = 1
