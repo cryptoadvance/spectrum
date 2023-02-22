@@ -29,7 +29,7 @@ classifiers =[
 dynamic=["dependencies","version"]
 
 [tool.setuptools.dynamic]
-dependencies = {file = ["requirements.in"]}
+dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools_scm]
 write_to = "src/cryptoadvance/spectrum/_version.py"
@@ -45,9 +45,6 @@ markers = [
 filterwarnings = [
     "ignore::DeprecationWarning:bitbox02[.*]"
 ]
-
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.in"]}
 
 [project.optional-dependencies]
 test = [
