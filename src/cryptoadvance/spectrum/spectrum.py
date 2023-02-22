@@ -108,7 +108,11 @@ class Spectrum:
         try:
             logger.info(f"Creating ElectrumSocket {host}:{port} (ssl={ssl})")
             self.sock = ElectrumSocket(
-                host=host, port=port, callback=self.process_notification, use_ssl=ssl
+                host=host,
+                port=port,
+                callback=self.process_notification,
+                socket_recreation_callback=self._sync,
+                use_ssl=ssl,
             )
         except ConnectionRefusedError as e:
             logger.error(
@@ -173,10 +177,12 @@ class Spectrum:
         every 100 scripts subscribed to and updates self.progress_percent
         """
         if not self.sock:
-            logger.info("Not Syncing in offline-mode ...")
+            logger.info("Not Syncing in offline-mode")
             return
-        else:
-            logger.info(f"Syncing ... {self.sock}")
+        if self.sock.is_socket_closed():
+            logger.info("Not Syncing as socket is broken")
+            return
+        logger.info(f"Syncing ... {self.sock}")
         subscription_logging_counter = 0
         # subscribe to all scripts
         all_scripts = Script.query.all()

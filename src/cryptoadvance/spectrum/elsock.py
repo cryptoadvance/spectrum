@@ -24,9 +24,17 @@ class ElectrumSocket:
     tries_threshold = 3  # how many tries the ping might fail before it's giving up
     sleep_ping_loop = 10  # seconds
     sleep_recv_loop = 0.1  # seconds
+    sleep_write_loop = 0.01
+    timeout = 10  # seconds for the call method
 
     def __init__(
-        self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10
+        self,
+        host="127.0.0.1",
+        port=50001,
+        use_ssl=False,
+        callback=None,
+        socket_recreation_callback=None,
+        timeout=None,
     ):
         """
         Initializes a new instance of the ElectrumSocket class.
@@ -50,7 +58,8 @@ class ElectrumSocket:
         assert type(self._use_ssl) == bool
         self.running = True
         self._callback = callback
-        self._timeout = timeout
+        self._socket_recreation_callback = socket_recreation_callback
+        self._timeout = timeout if timeout else self.__class__.timeout
         self._establish_socket()
         self._results = {}  # store results of the calls here
         self._requests = []
@@ -130,6 +139,14 @@ class ElectrumSocket:
             logger.info("recreating socket and threads")
             self._establish_socket()
             self._create_threads()
+            assert not self.is_socket_closed()
+            if hasattr(self, "_socket_recreation_callback"):
+                logger.debug(
+                    f"calling self._socket_recreation_callback {self._socket_recreation_callback.__name__}"
+                )
+                self._socket_recreation_callback()
+            else:
+                logger.debug("No reasonable _socket_recreation_callback found")
 
     def _write_loop(self):
         """
@@ -138,13 +155,13 @@ class ElectrumSocket:
         Returns:
         None
         """
-        sleep = 0.1
+        sleep = self.sleep_write_loop
         while self.running:
             while self._requests:
                 try:
                     req = self._requests.pop()
                     self._socket.sendall(json.dumps(req).encode() + b"\n")
-                    sleep = 0.1
+                    sleep = self.sleep_write_loop
                 except Exception as e:
                     logger.error(f"Error in write: {e.__class__}")
                     # handle_exception(e)
@@ -183,8 +200,8 @@ class ElectrumSocket:
         None
         """
         tries = 0
+        ts = self.ping()
         while self.running:
-            logger.debug(f"sleeping for {self.sleep_ping_loop}")
             time.sleep(self.sleep_ping_loop)
             try:
                 self.ping()
@@ -192,7 +209,7 @@ class ElectrumSocket:
             except ElSockTimeoutException as e:
                 tries = tries + 1
                 logger.error(
-                    f"Error in ping-loop ({tries}th time (requests #{len(self._requests)}, results #{len(self._results)})"
+                    f"Error in ping-loop ({tries}th time, next try in {self.sleep_ping_loop} seconds if threshold not met"
                 )
                 if tries > self.tries_threshold:
                     logger.error(
