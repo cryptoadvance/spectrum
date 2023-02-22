@@ -38,16 +38,16 @@ def test_elsock(caplog):
     logger.info(elsock._socket)
     elsock._socket.close()
     logger.info(
-        f"{datetime.now()} --------------------------closed-----------------------------------------------------------"
+        f"{datetime.now()} ----------------NOW the socket was intentionally closed-----------------------------------------------------------"
     )
     logger.info(f"{datetime.now()} Let's sleep for 5 seconds")
     time.sleep(5)
     logger.info(f"{datetime.now()} Let's sleep for 5 seconds")
     time.sleep(5)
-    logger.info(elsock._socket)
     logger.info(
-        f"{datetime.now()}--------------------------ping-----------------------------------------------------------"
+        f"{datetime.now()}--------------The socket connection should now work properly again-------------------------------------------------"
     )
+    logger.info(elsock._socket)
     ts = elsock.ping()
     logger.info(f"second working ping in {ts} ms")
     assert ts < 1

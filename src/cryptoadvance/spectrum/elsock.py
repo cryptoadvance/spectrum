@@ -140,7 +140,10 @@ class ElectrumSocket:
             self._establish_socket()
             self._create_threads()
             assert not self.is_socket_closed()
-            if hasattr(self, "_socket_recreation_callback"):
+            if (
+                hasattr(self, "_socket_recreation_callback")
+                and self._socket_recreation_callback is not None
+            ):
                 logger.debug(
                     f"calling self._socket_recreation_callback {self._socket_recreation_callback.__name__}"
                 )

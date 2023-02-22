@@ -26,7 +26,7 @@ classifiers =[
     'Operating System :: OS Independent',
     'Framework :: Flask',
 ]
-dynamic=["version", "version"]
+dynamic=["version"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.in"]}
