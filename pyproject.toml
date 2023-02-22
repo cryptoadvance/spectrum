@@ -46,6 +46,8 @@ filterwarnings = [
     "ignore::DeprecationWarning:bitbox02[.*]"
 ]
 
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.in"]}
 
 [project.optional-dependencies]
 test = [
