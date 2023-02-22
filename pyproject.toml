@@ -35,12 +35,13 @@ dependencies = {file = ["requirements.txt"]}
 write_to = "src/cryptoadvance/spectrum/_version.py"
 
 [tool.pytest.ini_options]
-norecursedirs = "tests/bintegration"
+norecursedirs = "tests/bintegration/*"
 log_format = "[%(levelname)8s] %(message)s %(name)s (%(filename)s:%(lineno)s)"
 markers = [
     "slow: mark test as slow.",
     "elm: mark test as elementsd dependent",
 ]
+python_files = "tests/test*.py"
 
 filterwarnings = [
     "ignore::DeprecationWarning:bitbox02[.*]"
