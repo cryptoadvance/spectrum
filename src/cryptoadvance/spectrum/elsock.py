@@ -20,68 +20,94 @@ class ElSockTimeoutException(Exception):
 
 
 class ElectrumSocket:
+
+    tries_threshold = 3  # how many tries the ping might fail before it's giving up
+    sleep_ping_loop = 10  # seconds
+    sleep_recv_loop = 0.1  # seconds
+
     def __init__(
         self, host="127.0.0.1", port=50001, use_ssl=False, callback=None, timeout=10
     ):
+        """
+        Initializes a new instance of the ElectrumSocket class.
+
+        Args:
+        - host (str): The hostname of the Electrum server. Default is "127.0.0.1".
+        - port (int): The port number of the Electrum server. Default is 50001.
+        - use_ssl (bool): Specifies whether to use SSL encryption for the socket connection. Default is False.
+        - callback (function): The callback function to call when receiving notifications from the Electrum server. Default is None.
+        - timeout (float): The timeout for the socket connection. Default is 10 seconds.
+
+        Returns:
+        None
+        """
         logger.info(f"Initializing ElectrumSocket with {host}:{port} (ssl: {ssl})")
         self._host = host
         self._port = port
-        self.use_ssl = use_ssl
+        self._use_ssl = use_ssl
         assert type(self._host) == str
         assert type(self._port) == int
-        assert type(use_ssl) == bool
+        assert type(self._use_ssl) == bool
         self.running = True
         self._callback = callback
         self._timeout = timeout
-        self.establish_socket()
+        self._establish_socket()
         self._results = {}  # store results of the calls here
         self._requests = []
         self._notifications = []
-        self.create_threads()
+        self._create_threads()
 
-        self._recv_thread = FlaskThread(target=self.monitor_loop)
-        self._recv_thread.daemon = True
-        self._recv_thread.start()
+        # The monitor-thread get extra as it is calling create_threads itself
+        self._monitor_thread = create_and_start_bg_thread(self._monitor_loop)
 
-    def establish_socket(self):
+    def _establish_socket(self):
+        """Establishes a new socket connection to the specified host and port.
+
+        If a socket connection already exists, it will be closed before creating a new one.
+        If SSL encryption is enabled, the socket will be wrapped with SSL.
+        The socket timeout is set to 5 seconds before connecting.
+        Once connected, the socket timeout is set to None, which means it is a blocking socket.
+
+        Returns:
+            None
+        """
+
+        # Just to be sure, maybe close it upfront
         if hasattr(self, "_socket"):
             if not self.is_socket_closed():
                 self._socket.close()
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         logger.debug(f"socket created  : {self._socket}")
-        if self.use_ssl:
+        if self._use_ssl:
             self._socket = ssl.wrap_socket(self._socket)
         logger.debug(f"socket wrapped  : {self._socket}")
         self._socket.settimeout(5)
 
         self._socket.connect((self._host, self._port))
         logger.debug(f"socket connected: {self._socket}")
-        self._socket.settimeout(None)
+        self._socket.settimeout(None)  # That means it's a BLOCKING socket
 
-    def create_threads(self):
-        logger.info("Starting ElectrumSocket Threads ...")
-        self._recv_thread = FlaskThread(target=self.recv_loop)
-        self._recv_thread.daemon = True
-        self._recv_thread.start()
-        self._write_thread = FlaskThread(target=self.write_loop)
-        self._write_thread.daemon = True
-        self._write_thread.start()
-        self._ping_thread = FlaskThread(target=self.ping_loop)
-        self._ping_thread.daemon = True
-        self._ping_thread.start()
-        self._notify_thread = FlaskThread(target=self.notify_loop)
-        self._notify_thread.daemon = True
-        self._notify_thread.start()
-        logger.info("Finished starting ElectrumSocket Threads")
+    def _create_threads(self):
+        """
+        Creates and starts the threads for:
+        * receiving notifications
+        * writing requests and reading results
+        * sending pings
 
-    def shutdown_threads(self):
-        return
-        self._recv_thread.stop
-        self._write_thread
-        self._ping_thread
-        self._notify_thread
+        Returns:
+        None
+        """
+        self._recv_thread = create_and_start_bg_thread(self.recv_loop)
+        self._write_thread = create_and_start_bg_thread(self._write_loop)
+        self._ping_thread = create_and_start_bg_thread(self._ping_loop)
+        self._notify_thread = create_and_start_bg_thread(self._notify_loop)
 
     def is_socket_closed(self):
+        """Checks whether the socket connection is closed or not.
+
+        Returns:
+            True if the socket is closed, False otherwise.
+        """
         try:
             fd = self._socket.fileno()
         except ValueError:
@@ -89,16 +115,29 @@ class ElectrumSocket:
         else:
             return False
 
-    def monitor_loop(self):
+    def _monitor_loop(self):
+        """
+        The loop function for monitoring the socket connection.
+        If the ping thread is not alive, the socket connection and threads will be recreated.
+
+        Returns:
+        None
+        """
         sleep = 1
         while self.running:
             while self._ping_thread.is_alive():
                 time.sleep(sleep)
             logger.info("recreating socket and threads")
-            self.establish_socket()
-            self.create_threads()
+            self._establish_socket()
+            self._create_threads()
 
-    def write_loop(self):
+    def _write_loop(self):
+        """
+        The loop function for writing requests to the Electrum server.
+
+        Returns:
+        None
+        """
         sleep = 0.1
         while self.running:
             while self._requests:
@@ -107,29 +146,46 @@ class ElectrumSocket:
                     self._socket.sendall(json.dumps(req).encode() + b"\n")
                     sleep = 0.1
                 except Exception as e:
-                    logger.error(f"Error in write: {e}")
+                    logger.error(f"Error in write: {e.__class__}")
                     # handle_exception(e)
                     sleep = 3
             time.sleep(sleep)
 
     def recv_loop(self):
-        sleep = 0.1  # This probably heavily impacts the sync-time
+        """
+        The loop function for receiving data from the Electrum server.
+
+        If the socket breaks, this thread is probably stuck as the thread
+        is a blocking thread. So in that case the monitor-loop will simply
+        recreate the corresponding thread.
+
+        Returns:
+        None
+        """
+        sleep = self.sleep_recv_loop  # This probably heavily impacts the sync-time
         while self.running:
             try:
                 self.recv()
-                sleep = 0.1
+                sleep = self.sleep_recv_loop
             except Exception as e:
                 logger.error(f"Error receiving data: {e}")
-                # handle_exception(e)
                 sleep = 3
             time.sleep(sleep)
 
-    def ping_loop(self):
-        sleep = 10
+    def _ping_loop(self):
+        """
+        The loop function for sending ping requests to the Electrum server.
+
+        If the ping fails for tries_threshold, it'll return which will end the
+        thread and cause the monitor thread to recreate all other threads.
+
+        Returns:
+        None
+        """
         tries = 0
         while self.running:
-            time.sleep(sleep)
-
+            logger.debug(f"sleeping for {self.sleep_ping_loop}")
+            time.sleep(self.sleep_ping_loop)
             try:
                 self.ping()
                 tries = 0
@@ -138,11 +194,19 @@ class ElectrumSocket:
                 logger.error(
                     f"Error in ping-loop ({tries}th time (requests #{len(self._requests)}, results #{len(self._results)})"
                 )
-                if tries > 3:
-                    logger.error("Ping failure for 60 seconds, Giving up!")
+                if tries > self.tries_threshold:
+                    logger.error(
+                        "More than {self.tries_threshold} Ping failures for 60 seconds, Giving up!"
+                    )
                     return  # will end the thread
 
     def recv(self):
+        """
+        Receives and processes the data from the Electrum server.
+
+        Returns:
+        None
+        """
         while self.running:
             data = self._socket.recv(2048)
             while not data.endswith(b"\n"):  # b"\n" is the end of the message
@@ -158,7 +222,7 @@ class ElectrumSocket:
                 if "id" in response:  # request
                     self._results[response["id"]] = response
 
-    def notify_loop(self):
+    def _notify_loop(self):
         while self.running:
             while self._notifications:
                 data = self._notifications.pop()
@@ -176,6 +240,17 @@ class ElectrumSocket:
             logger.debug("Notification:", data)
 
     def call(self, method, params=[]):
+        """
+        Calls a method on the Electrum server and returns the response.
+
+        Args:
+        - method (str): The name of the method to call on the Electrum server.
+        - *params: The parameters to pass to the method.
+        - timeout (float): The timeout for the request. If not specified, the default timeout of the ElectrumSocket instance will be used.
+
+        Returns:
+        dict: The response from the Electrum server.
+        """
         uid = random.randint(0, 1 << 32)
         obj = {"jsonrpc": "2.0", "method": method, "params": params, "id": uid}
         self._requests.append(obj)
@@ -202,3 +277,22 @@ class ElectrumSocket:
     def __del__(self):
         logger.info("Closing socket ...")
         self._socket.close()
+
+
+def create_and_start_bg_thread(func):
+    """Creates and starts a new background thread that executes the given function.
+
+    The thread is started as a daemon thread, which means it will automatically terminate
+    when the main thread exits. The function is executed in the new thread.
+
+    Args:
+        func: The function to execute in the background thread.
+
+    Returns:
+        None
+    """
+    thread = FlaskThread(target=func)
+    thread.daemon = True
+    thread.start()
+    logger.info(f"Started bg thread for {func.__name__}")
+    return thread

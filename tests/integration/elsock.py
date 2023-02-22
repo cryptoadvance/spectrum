@@ -11,7 +11,7 @@ from embit.bip32 import NETWORKS, HDKey
 from mock import patch
 from embit.descriptor.checksum import add_checksum
 from cryptoadvance.spectrum.elsock import ElectrumSocket
-
+from datetime import datetime
 
 logger = logging.getLogger("cryptoadvance")
 
@@ -26,21 +26,28 @@ def test_elsock(caplog):
     def callback(something):
         print(something)
 
+    # Speed up the test ...
+    ElectrumSocket.tries_threshold = 1
+    ElectrumSocket.sleep_ping_loop = 1
+    logger.info(f"{datetime.now()} Testing ElectrumSocket")
     elsock = ElectrumSocket(
-        host="electrum.emzy.de", port=50002, callback=callback, use_ssl=True
+        host="electrum.emzy.de", port=50002, callback=callback, use_ssl=True, timeout=1
     )
     ts = elsock.ping()
     logger.info(f"First working ping in {ts} ms")
-    print(elsock._socket)
+    logger.info(elsock._socket)
     elsock._socket.close()
     logger.info(
-        "--------------------------closed-----------------------------------------------------------"
+        f"{datetime.now()} --------------------------closed-----------------------------------------------------------"
     )
-
-    time.sleep(120)
-    print(elsock._socket)
+    logger.info(f"{datetime.now()} Let's sleep for 5 seconds")
+    time.sleep(5)
+    logger.info(f"{datetime.now()} Let's sleep for 5 seconds")
+    time.sleep(5)
+    logger.info(elsock._socket)
     logger.info(
-        "--------------------------ping-----------------------------------------------------------"
+        f"{datetime.now()}--------------------------ping-----------------------------------------------------------"
     )
     ts = elsock.ping()
-    assert False
+    logger.info(f"second working ping in {ts} ms")
+    assert ts < 1
