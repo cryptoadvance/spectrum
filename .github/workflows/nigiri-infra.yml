@@ -35,4 +35,6 @@ jobs:
       - name: Run integration tests
         run: |
           pytest tests/integration/basics.py
+          pytest tests/integration/spectrum_test.py
+          pytest tests/integration/elsock_test.py
         

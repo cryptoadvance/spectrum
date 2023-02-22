@@ -23,7 +23,7 @@ from embit.transaction import TransactionInput, TransactionOutput
 from sqlalchemy.sql import func
 
 from .db import UTXO, Descriptor, Script, Tx, TxCategory, Wallet, db
-from .elsock import ElectrumSocket
+from .elsock import ElectrumSocket, ElSockTimeoutException
 from .util import (
     FlaskThread,
     SpectrumException,
@@ -127,7 +127,7 @@ class Spectrum:
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
-        if self.sock:
+        if self.sock and not self.sock.is_socket_closed():
             logger.info(f"Pinged electrum in {self.sock.ping()} ")
             logger.info("subscribe to block headers")
             res = self.sock.call("blockchain.headers.subscribe")
@@ -138,6 +138,8 @@ class Spectrum:
             logger.info(f"Set roothash {self.roothash}")
             self.roothash = get_blockhash(rootheader)
             self.chain = ROOT_HASHES.get(self.roothash, "regtest")
+        else:
+            self.sock = None
 
     def stop(self):
         logger.info("Stopping Spectrum")
