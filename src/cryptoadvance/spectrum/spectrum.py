@@ -23,7 +23,7 @@ from embit.transaction import TransactionInput, TransactionOutput
 from sqlalchemy.sql import func
 
 from .db import UTXO, Descriptor, Script, Tx, TxCategory, Wallet, db
-from .elsock import ElectrumSocket
+from .elsock import ElectrumSocket, ElSockTimeoutException
 from .util import (
     FlaskThread,
     SpectrumException,
@@ -108,7 +108,11 @@ class Spectrum:
         try:
             logger.info(f"Creating ElectrumSocket {host}:{port} (ssl={ssl})")
             self.sock = ElectrumSocket(
-                host=host, port=port, callback=self.process_notification, use_ssl=ssl
+                host=host,
+                port=port,
+                callback=self.process_notification,
+                socket_recreation_callback=self._sync,
+                use_ssl=ssl,
             )
         except ConnectionRefusedError as e:
             logger.error(
@@ -123,7 +127,7 @@ class Spectrum:
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
-        if self.sock:
+        if self.sock and not self.sock.is_socket_closed():
             logger.info(f"Pinged electrum in {self.sock.ping()} ")
             logger.info("subscribe to block headers")
             res = self.sock.call("blockchain.headers.subscribe")
@@ -134,6 +138,8 @@ class Spectrum:
             logger.info(f"Set roothash {self.roothash}")
             self.roothash = get_blockhash(rootheader)
             self.chain = ROOT_HASHES.get(self.roothash, "regtest")
+        else:
+            self.sock = None
 
     def stop(self):
         logger.info("Stopping Spectrum")
@@ -173,10 +179,12 @@ class Spectrum:
         every 100 scripts subscribed to and updates self.progress_percent
         """
         if not self.sock:
-            logger.info("Not Syncing in offline-mode ...")
+            logger.info("Not Syncing in offline-mode")
             return
-        else:
-            logger.info(f"Syncing ... {self.sock}")
+        if self.sock.is_socket_closed():
+            logger.info("Not Syncing as socket is broken")
+            return
+        logger.info(f"Syncing ... {self.sock}")
         subscription_logging_counter = 0
         # subscribe to all scripts
         all_scripts = Script.query.all()

@@ -139,5 +139,4 @@ dmypy.json
 
 # MacOS
 .DS_Store
-setup.py
 src/cryptoadvance/spectrum/_version.py
