@@ -43,8 +43,6 @@ class ElectrumSocket:
         self._recv_thread.daemon = True
         self._recv_thread.start()
 
-        self._waiting = False
-
     def establish_socket(self):
         if hasattr(self, "_socket"):
             if not self.is_socket_closed():
@@ -168,7 +166,6 @@ class ElectrumSocket:
             time.sleep(0.02)
 
     def notify(self, data):
-        self._waiting = False  # any notification resets waiting
         if self._callback:
             try:
                 self._callback(data)
@@ -196,11 +193,6 @@ class ElectrumSocket:
             raise ValueError(res["error"])
         if "result" in res:
             return res["result"]
-
-    def wait(self):
-        self._waiting = True
-        while self._waiting:
-            time.sleep(0.01)
 
     def ping(self):
         start = time.time()
