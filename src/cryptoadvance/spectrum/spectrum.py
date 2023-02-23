@@ -119,9 +119,10 @@ class Spectrum:
                 f"Connection refused (host={self.host}, port={self.port}, use_ssl={ssl}): Proceeding in offline-Mode"
             )
             self.sock = None  # offline mode
-        except OSError:
+        except OSError as e:
+            logger.exception(e)
             logger.error(
-                f"Connection timeout (host={self.host}, port={self.port}, use_ssl={ssl}): Proceeding in offline-Mode"
+                f"Maybe a connection timeout (host={self.host}, port={self.port}, use_ssl={ssl}): Proceeding in offline-Mode"
             )
             self.sock = None
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
@@ -204,6 +205,7 @@ class Spectrum:
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
+        self.progress_percent = 100
 
     def sync(self, asyncc=True):
         if asyncc:
@@ -1290,13 +1292,18 @@ class Spectrum:
         ).first()
         # subscribe to all scripts in a thread to speed up creation of the wallet
         sc: Script
-        relevant_scripts = Script.query.filter_by(descriptor=descriptor).all()
+        relevant_scripts_query = Script.query.filter_by(descriptor=descriptor)
+        relevant_scripts = relevant_scripts_query.all()
+        relevant_scripts_count = relevant_scripts_query.count()
+
         count_syned_scripts = 0
         for sc in relevant_scripts:
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 count_syned_scripts = count_syned_scripts + 1
+                self.progress_percent = count_syned_scripts / count_syned_scripts * 100
                 self.sync_script(sc, res)
+        self.progress_percent = 100
         logger.info(
             f"subscribed to {len(relevant_scripts)} scripts for descriptor {descriptor.descriptor[:30]}... where {count_syned_scripts} got synced"
         )
