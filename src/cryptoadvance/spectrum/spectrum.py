@@ -204,6 +204,7 @@ class Spectrum:
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
+        self.progress_percent = 100
 
     def sync(self, asyncc=True):
         if asyncc:
