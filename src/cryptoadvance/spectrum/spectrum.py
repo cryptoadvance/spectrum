@@ -222,6 +222,8 @@ class Spectrum:
         else:
             self._sync()
 
+    # ToDo: subcribe_scripts and sync is very similiar. One does it for all of the scripts in the DB,
+    # the other one only for a specific descriptor. We should merge them!
     def subcribe_scripts(self, descriptor, asyncc=True):
         """Takes a descriptor and syncs all the scripts into the DB
         creates a new thread doing that.
@@ -237,11 +239,11 @@ class Spectrum:
         else:
             self._subcribe_scripts(descriptor.id)
 
-    def _subcribe_scripts(self, descriptor_id: Descriptor) -> None:
-
+    def _subcribe_scripts(self, descriptor_id: int) -> None:
         descriptor: Descriptor = Descriptor.query.filter(
             Descriptor.id == descriptor_id
         ).first()
+        logger.info(f"Starting sync/subscribe for {descriptor.descriptor[:30]}")
         # subscribe to all scripts in a thread to speed up creation of the wallet
         sc: Script
         relevant_scripts_query = Script.query.filter_by(descriptor=descriptor)
@@ -283,9 +285,13 @@ class Spectrum:
         # Normally every script has 1-2 transactions and 0-1 utxos,
         # so even if we delete everything and resync it's ok
         # except donation addresses that may have many txs...
-        logger.info(
+        logger.debug(
             f"Script {script.scripthash[:7]} is not synced {script.state} != {state}"
         )
+        if script.state != None:
+            logger.info(
+                f"Script {script.scripthash[:7]} has an update from state {script.state} to {state}"
+            )
         script_pubkey = script.script_pubkey
         internal = script.descriptor.internal
         # get all transactions, utxos and update balances
