@@ -9,6 +9,7 @@ import threading
 import time
 import traceback
 from functools import wraps
+from datetime import datetime
 
 from embit import bip32
 from embit.descriptor import Descriptor as EmbitDescriptor
@@ -185,7 +186,7 @@ class Spectrum:
         if self.sock.is_socket_closed():
             logger.info("Not Syncing as socket is broken")
             return
-        logger.info(f"Syncing ... {self.sock}")
+        logger.info(f"Syncing ...")
         subscription_logging_counter = 0
         # subscribe to all scripts
         all_scripts = Script.query.all()
@@ -196,16 +197,18 @@ class Spectrum:
                 continue
             subscription_logging_counter += 1
             if subscription_logging_counter % 100 == 0:
-                progress_percent = subscription_logging_counter / all_scripts_len * 100
-                self.progress_percent = int(progress_percent)
+                self.progress_percent = int(
+                    subscription_logging_counter / all_scripts_len * 100
+                )
                 logger.info(
-                    f"Now subscribed to {subscription_logging_counter} scripthashes ({int(progress_percent)}%)"
+                    f"Now subscribed to {subscription_logging_counter} scripthashes ({self.progress_percent}%)"
                 )
 
             res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
             if res != sc.state:
                 self.sync_script(sc, res)
         self.progress_percent = 100
+        logger.info(f"Finished Syncing {all_scripts_len} scripts")
 
     def sync(self, asyncc=True):
         if asyncc:
@@ -219,13 +222,76 @@ class Spectrum:
         else:
             self._sync()
 
+    # ToDo: subcribe_scripts and sync is very similiar. One does it for all of the scripts in the DB,
+    # the other one only for a specific descriptor. We should merge them!
+    def subcribe_scripts(self, descriptor, asyncc=True):
+        """Takes a descriptor and syncs all the scripts into the DB
+        creates a new thread doing that.
+        """
+        if asyncc:
+            t = FlaskThread(
+                target=self._subcribe_scripts,
+                args=[
+                    descriptor.id,
+                ],
+            )
+            t.start()
+        else:
+            self._subcribe_scripts(descriptor.id)
+
+    def _subcribe_scripts(self, descriptor_id: int) -> None:
+        descriptor: Descriptor = Descriptor.query.filter(
+            Descriptor.id == descriptor_id
+        ).first()
+        logger.info(f"Starting sync/subscribe for {descriptor.descriptor[:30]}")
+        # subscribe to all scripts in a thread to speed up creation of the wallet
+        sc: Script
+        relevant_scripts_query = Script.query.filter_by(descriptor=descriptor)
+        relevant_scripts = relevant_scripts_query.all()
+        relevant_scripts_count = relevant_scripts_query.count()
+
+        count_scripts = 0
+        count_syned_scripts = 0
+        ts = datetime.now()
+        for sc in relevant_scripts:
+            # subscribing
+            res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
+            count_scripts += 1
+
+            # syncing
+            if res != sc.state:
+                self.sync_script(sc, res)
+                count_syned_scripts += 1
+
+            # logging and expose progress
+            if count_scripts % 100 == 0:
+                logger.info(
+                    f"Now subscribed to {count_syned_scripts} of {relevant_scripts_count} scripthashes ({self.progress_percent}%) (via importdescriptor))"
+                )
+            self.progress_percent = int(
+                count_syned_scripts / relevant_scripts_count * 100
+            )
+
+        self.progress_percent = 100
+        ts_diff_s = int((datetime.now() - ts).total_seconds())
+        logger.info(
+            f"Finished Subscribing and syncing for descriptor {descriptor.descriptor[:30]} in {ts_diff_s}"
+        )
+        logger.info(
+            f"A total of {len(relevant_scripts)} scripts got subscribed where {count_syned_scripts} got synced"
+        )
+
     def sync_script(self, script, state=None):
         # Normally every script has 1-2 transactions and 0-1 utxos,
         # so even if we delete everything and resync it's ok
         # except donation addresses that may have many txs...
-        logger.info(
+        logger.debug(
             f"Script {script.scripthash[:7]} is not synced {script.state} != {state}"
         )
+        if script.state != None:
+            logger.info(
+                f"Script {script.scripthash[:7]} has an update from state {script.state} to {state}"
+            )
         script_pubkey = script.script_pubkey
         internal = script.descriptor.internal
         # get all transactions, utxos and update balances
@@ -1269,41 +1335,3 @@ class Spectrum:
         db.session.commit()
         self.subcribe_scripts(d)
         return d
-
-    def subcribe_scripts(self, descriptor, asyncc=True):
-        """Takes a descriptor and syncs all the scripts into the DB
-        creates a new thread doing that.
-        """
-        if asyncc:
-            t = FlaskThread(
-                target=self._subcribe_scripts,
-                args=[
-                    descriptor.id,
-                ],
-            )
-            t.start()
-        else:
-            self._subcribe_scripts(descriptor.id)
-
-    def _subcribe_scripts(self, descriptor_id: Descriptor) -> None:
-
-        descriptor: Descriptor = Descriptor.query.filter(
-            Descriptor.id == descriptor_id
-        ).first()
-        # subscribe to all scripts in a thread to speed up creation of the wallet
-        sc: Script
-        relevant_scripts_query = Script.query.filter_by(descriptor=descriptor)
-        relevant_scripts = relevant_scripts_query.all()
-        relevant_scripts_count = relevant_scripts_query.count()
-
-        count_syned_scripts = 0
-        for sc in relevant_scripts:
-            res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
-            if res != sc.state:
-                count_syned_scripts = count_syned_scripts + 1
-                self.progress_percent = count_syned_scripts / count_syned_scripts * 100
-                self.sync_script(sc, res)
-        self.progress_percent = 100
-        logger.info(
-            f"subscribed to {len(relevant_scripts)} scripts for descriptor {descriptor.descriptor[:30]}... where {count_syned_scripts} got synced"
-        )
