@@ -91,7 +91,7 @@ class ElectrumSocket:
         Once connected, the socket timeout is set to None, which means it is a blocking socket.
 
         Returns:
-            None
+            boolean if successfull
         """
 
         # Just to be sure, maybe close it upfront
@@ -112,7 +112,7 @@ class ElectrumSocket:
                 logger.error(f"Internet connection might not be up: {e}")
                 return False
             logger.debug(f"socket connected: {self._socket}")
-            self._socket.settimeout(None)  # That means it's a BLOCKING socket
+            self._socket.settimeout(20)  # That means it's a BLOCKING socket
             logger.info(f"Successfully created Socket {self._socket}")
             return True
         except Exception as e:
@@ -127,7 +127,7 @@ class ElectrumSocket:
         * sending pings
 
         Returns:
-        None
+        boolean if successfull
         """
         try:
             self._recv_thread = create_and_start_bg_thread(self.recv_loop)
@@ -165,34 +165,6 @@ class ElectrumSocket:
         while True:  # Endless loop
             try:
                 time.sleep(1)
-                if self.status == "ok":
-                    while self.thread_status[
-                        "all_alive"
-                    ]:  # most relevant is the ping_status
-                        time.sleep(1)
-                    self.status = "broken_killing_threads"
-                    logger.info(
-                        f"Issue with Electrum deteted, threads died: {','.join(self.thread_status['not_alive'])}"
-                    )
-
-                if self.status == "broken_killing_threads":
-                    logger.info("trying to stop all threads ...")
-                    self.running = False
-                    counter = 0
-                    log_frequency = 2
-                    while self.thread_status["any_alive"]:
-                        # Should we have a timeout? What to do then?
-                        if counter % log_frequency == 0:
-                            logger.info(
-                                f"Waiting for those threads to exit: {' '.join(self.thread_status['alive'])} ({counter}/{log_frequency})"
-                            )
-                            if counter > 10:
-                                log_frequency += 1
-                        time.sleep(5)
-                        counter += 1
-                    self.status = "creating_socket"
-                    self.running = True
-
                 if (
                     self.status == "creating_socket"
                     or self.status == "broken_creating_socket"
@@ -219,6 +191,9 @@ class ElectrumSocket:
                     self.status = "execute_recreation_callback"
 
                 if self.status == "execute_recreation_callback":
+                    # set the new status here before we call the callback
+                    # otherwise the receiving code might be confused why called
+                    self.status = "ok"
                     if (
                         hasattr(self, "_on_recreation_callback")
                         and self._on_recreation_callback is not None
@@ -229,12 +204,44 @@ class ElectrumSocket:
                         self._on_recreation_callback()
                     else:
                         logger.debug("No reasonable _on_recreation_callback found")
-                    self.status = "ok"
+
+                if self.status == "ok":
+                    while self.thread_status[
+                        "all_alive"
+                    ]:  # most relevant is the ping_status
+                        time.sleep(1)
+                    self.status = "broken_killing_threads"
+                    logger.info(
+                        f"Issue with Electrum deteted, threads died: {','.join(self.thread_status['not_alive'])}"
+                    )
+
+                if self.status == "broken_killing_threads":
+                    logger.info("trying to stop all threads ...")
+                    self.running = False
+                    # self._socket.setblocking(False)
+                    counter = 0
+                    log_frequency = 2
+                    while self.thread_status["any_alive"]:
+                        # Should we have a timeout? What to do then?
+                        if counter % log_frequency == 0:
+                            logger.info(
+                                f"Waiting for those threads to exit: {' '.join(self.thread_status['alive'])} ({counter}/{log_frequency})"
+                            )
+                            if counter > 10:
+                                log_frequency += 1
+                        time.sleep(5)
+                        counter += 1
+                    self.status = "creating_socket"
+                    self.running = True
+
             except Exception as e:
                 logger.error(
                     "Monitoring Loop of Electrum-Socket got an Exception. This is critical if it's happening often!"
                 )
                 logger.exception(e)
+                time.sleep(
+                    3
+                )  # to prevent high cpu load if this exception will occur endlessly
 
     @property
     def thread_status(self):
@@ -309,12 +316,19 @@ class ElectrumSocket:
         """
         sleep = self.sleep_recv_loop  # This probably heavily impacts the sync-time
         while self.running:
-            try:
-                self.recv()
-                sleep = self.sleep_recv_loop
-            except Exception as e:
-                logger.error(f"Error receiving data: {e}")
-                sleep = 3
+            data = self._socket.recv(2048)
+            while not data.endswith(b"\n"):  # b"\n" is the end of the message
+                data += self._socket.recv(2048)
+            # data looks like this:
+            # b'{"jsonrpc": "2.0", "result": {"hex": "...", "height": 761086}, "id": 2210736436}\n'
+            arr = [json.loads(d.decode()) for d in data.strip().split(b"\n") if d]
+            # arr looks like this
+            # [{'jsonrpc': '2.0', 'result': {'hex': '...', 'height': 761086}, 'id': 2210736436}]
+            for response in arr:
+                if "method" in response:  # notification
+                    self._notifications.append(response)
+                if "id" in response:  # request
+                    self._results[response["id"]] = response
             time.sleep(sleep)
         logger.info("Ended recv-loop")
 
@@ -345,29 +359,6 @@ class ElectrumSocket:
                         f"More than {self.tries_threshold} Ping failures for {self.tries_threshold * self.sleep_ping_loop} seconds, Giving up!"
                     )
                     return  # will end the thread
-
-    def recv(self):
-        """
-        Receives and processes the data from the Electrum server.
-
-        Returns:
-        None
-        """
-        while self.running:
-            data = self._socket.recv(2048)
-            while not data.endswith(b"\n"):  # b"\n" is the end of the message
-                data += self._socket.recv(2048)
-            # data looks like this:
-            # b'{"jsonrpc": "2.0", "result": {"hex": "...", "height": 761086}, "id": 2210736436}\n'
-            arr = [json.loads(d.decode()) for d in data.strip().split(b"\n") if d]
-            # arr looks like this
-            # [{'jsonrpc': '2.0', 'result': {'hex': '...', 'height': 761086}, 'id': 2210736436}]
-            for response in arr:
-                if "method" in response:  # notification
-                    self._notifications.append(response)
-                if "id" in response:  # request
-                    self._results[response["id"]] = response
-        logger.info("Ended recv")
 
     def _notify_loop(self):
         while self.running:
