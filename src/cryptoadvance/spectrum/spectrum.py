@@ -106,30 +106,20 @@ class Spectrum:
         if not os.path.exists(self.txdir):
             logger.info(f"Creating txdir {self.txdir} ")
             os.makedirs(self.txdir)
-        try:
-            logger.info(f"Creating ElectrumSocket {host}:{port} (ssl={ssl})")
-            self.sock = ElectrumSocket(
-                host=host,
-                port=port,
-                callback=self.process_notification,
-                socket_recreation_callback=self._sync,
-                use_ssl=ssl,
-            )
-        except ConnectionRefusedError as e:
-            logger.error(
-                f"Connection refused (host={self.host}, port={self.port}, use_ssl={ssl}): Proceeding in offline-Mode"
-            )
-            self.sock = None  # offline mode
-        except OSError as e:
-            logger.exception(e)
-            logger.error(
-                f"Maybe a connection timeout (host={self.host}, port={self.port}, use_ssl={ssl}): Proceeding in offline-Mode"
-            )
-            self.sock = None
+
+        logger.info(f"Creating ElectrumSocket {host}:{port} (ssl={ssl})")
+        self.sock = ElectrumSocket(
+            host=host,
+            port=port,
+            callback=self.process_notification,
+            socket_recreation_callback=self._sync,
+            use_ssl=ssl,
+        )
+
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
         # 143 - Testnet, 110 - Mainnet, 195 - Liquid
         self.t0 = time.time()  # for uptime
-        if self.sock and not self.sock.is_socket_closed():
+        if self.sock and self.sock.status == "ok":
             logger.info(f"Pinged electrum in {self.sock.ping()} ")
             logger.info("subscribe to block headers")
             res = self.sock.call("blockchain.headers.subscribe")
@@ -140,8 +130,6 @@ class Spectrum:
             logger.info(f"Set roothash {self.roothash}")
             self.roothash = get_blockhash(rootheader)
             self.chain = ROOT_HASHES.get(self.roothash, "regtest")
-        else:
-            self.sock = None
 
     def stop(self):
         logger.info("Stopping Spectrum")
@@ -149,10 +137,7 @@ class Spectrum:
 
     def is_connected(self) -> bool:
         """Returns True if there is a socket connection, False otherwise."""
-        if self.sock:
-            return True
-        else:
-            return False
+        return self.sock.status == "ok"
 
     @property
     def txdir(self):
@@ -174,17 +159,14 @@ class Spectrum:
         self._progress_percent = int(value)
 
     def _sync(self):
-        """This code is checking if the self.sock variable is not set (offline-mode)
+        """This code is checking self.sock for properly working (otherwise offline-mode)
         and if it is, it subscribes to all scripts and checks if the state of the
         script matches the response from the subscription. If they don't match,
         it calls a sync_script function to update the state. It also logs progress
         every 100 scripts subscribed to and updates self.progress_percent
         """
-        if not self.sock:
+        if self.sock.status != "ok":
             logger.info("Not Syncing in offline-mode")
-            return
-        if self.sock.is_socket_closed():
-            logger.info("Not Syncing as socket is broken")
             return
         logger.info(f"Syncing ...")
         subscription_logging_counter = 0
@@ -204,7 +186,12 @@ class Spectrum:
                     f"Now subscribed to {subscription_logging_counter} scripthashes ({self.progress_percent}%)"
                 )
 
-            res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
+            try:
+                res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
+            except ElSockTimeoutException:
+                logger.error("ElSockTimeoutException in _sync. Stopping Syncing!")
+                self.progress_percent = 0
+                return
             if res != sc.state:
                 self.sync_script(sc, res)
         self.progress_percent = 100
