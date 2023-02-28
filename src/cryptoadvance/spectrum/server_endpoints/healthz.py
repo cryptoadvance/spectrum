@@ -19,7 +19,7 @@ def readyness():
     try:
         # Probably improvable:
         logger.info("ready?")
-        assert app.spectrum.sock is not None
+        assert app.spectrum.is_connected()
     except Exception as e:
         logger.info("no!")
         return {"message": "i am not ready"}, 500
