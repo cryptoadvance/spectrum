@@ -58,16 +58,29 @@ class ElectrumSocket:
         assert type(self._use_ssl) == bool
         self.running = True
         self._callback = callback
-        self._on_recreation_callback = socket_recreation_callback
         self._timeout = timeout if timeout else self.__class__.timeout
-        self._establish_socket()
+
         self._results = {}  # store results of the calls here
         self._requests = []
         self._notifications = []
-        self._create_threads()
-
-        # The monitor-thread get extra as it is calling create_threads itself
+        # The monitor-thread will create the other threads
         self._monitor_thread = create_and_start_bg_thread(self._monitor_loop)
+        while not (self.status == "ok" or self.status.startswith("broken_")):
+            time.sleep(0.2)
+        # Preventing to execute that callback for the first time, therefore
+        # setting it at the very end:
+        self._on_recreation_callback = socket_recreation_callback
+
+    @property
+    def status(self):
+        if hasattr(self, "_status"):
+            return self._status
+        return "unknown"
+
+    @status.setter
+    def status(self, value):
+        logger.info(f"ElectrumSocket Status changed from {self.status} to {value}")
+        self._status = value
 
     def _establish_socket(self):
         """Establishes a new socket connection to the specified host and port.
@@ -82,19 +95,29 @@ class ElectrumSocket:
         """
 
         # Just to be sure, maybe close it upfront
-        if hasattr(self, "_socket"):
-            if not self.is_socket_closed():
-                self._socket.close()
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        logger.debug(f"socket created  : {self._socket}")
-        if self._use_ssl:
-            self._socket = ssl.wrap_socket(self._socket)
-        logger.debug(f"socket wrapped  : {self._socket}")
-        self._socket.settimeout(5)
+        try:
+            if hasattr(self, "_socket"):
+                if not self.is_socket_closed():
+                    self._socket.close()
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            logger.debug(f"socket created  : {self._socket}")
+            if self._use_ssl:
+                self._socket = ssl.wrap_socket(self._socket)
+            logger.debug(f"socket wrapped  : {self._socket}")
+            self._socket.settimeout(5)
 
-        self._socket.connect((self._host, self._port))
-        logger.debug(f"socket connected: {self._socket}")
-        self._socket.settimeout(None)  # That means it's a BLOCKING socket
+            try:
+                self._socket.connect((self._host, self._port))
+            except socket.gaierror as e:
+                logger.error(f"Internet connection might not be up: {e}")
+                return False
+            logger.debug(f"socket connected: {self._socket}")
+            self._socket.settimeout(None)  # That means it's a BLOCKING socket
+            logger.info(f"Successfully created Socket {self._socket}")
+            return True
+        except Exception as e:
+            logger.exception(e)
+            return False
 
     def _create_threads(self):
         """
@@ -106,10 +129,15 @@ class ElectrumSocket:
         Returns:
         None
         """
-        self._recv_thread = create_and_start_bg_thread(self.recv_loop)
-        self._write_thread = create_and_start_bg_thread(self._write_loop)
-        self._ping_thread = create_and_start_bg_thread(self._ping_loop)
-        self._notify_thread = create_and_start_bg_thread(self._notify_loop)
+        try:
+            self._recv_thread = create_and_start_bg_thread(self.recv_loop)
+            self._write_thread = create_and_start_bg_thread(self._write_loop)
+            self._ping_thread = create_and_start_bg_thread(self._ping_loop)
+            self._notify_thread = create_and_start_bg_thread(self._notify_loop)
+            return True
+        except Exception as e:
+            logger.exception()
+            return False
 
     def is_socket_closed(self):
         """Checks whether the socket connection is closed or not.
@@ -132,24 +160,120 @@ class ElectrumSocket:
         Returns:
         None
         """
-        sleep = 1
-        while self.running:
-            while self._ping_thread.is_alive():
-                time.sleep(sleep)
-            logger.info("recreating socket and threads")
-            self._establish_socket()
-            self._create_threads()
-            assert not self.is_socket_closed()
-            if (
-                hasattr(self, "_on_recreation_callback")
-                and self._on_recreation_callback is not None
-            ):
-                logger.debug(
-                    f"calling self._on_recreation_callback {self._on_recreation_callback.__name__}"
+
+        self.status = "creating_socket"
+        while True:  # Endless loop
+            try:
+                time.sleep(1)
+                if self.status == "ok":
+                    while self.thread_status[
+                        "all_alive"
+                    ]:  # most relevant is the ping_status
+                        time.sleep(1)
+                    self.status = "broken_killing_threads"
+                    logger.info(
+                        f"Issue with Electrum deteted, threads died: {','.join(self.thread_status['not_alive'])}"
+                    )
+
+                if self.status == "broken_killing_threads":
+                    logger.info("trying to stop all threads ...")
+                    self.running = False
+                    counter = 0
+                    log_frequency = 2
+                    while self.thread_status["any_alive"]:
+                        # Should we have a timeout? What to do then?
+                        if counter % log_frequency == 0:
+                            logger.info(
+                                f"Waiting for those threads to exit: {' '.join(self.thread_status['alive'])} ({counter}/{log_frequency})"
+                            )
+                            if counter > 10:
+                                log_frequency += 1
+                        time.sleep(5)
+                        counter += 1
+                    self.status = "creating_socket"
+                    self.running = True
+
+                if (
+                    self.status == "creating_socket"
+                    or self.status == "broken_creating_socket"
+                ):
+                    logger.info("(re-)creating socket ...")
+                    if not self._establish_socket():
+                        if self.status == "broken_creating_socket":
+                            time.sleep(10)
+                        else:
+                            # don't sleep in order to speed up the boot time
+                            self.status = "broken_creating_socket"
+                        continue
+                    self.status = "creating_threads"
+
+                if self.status == "creating_threads":
+                    if self.is_socket_closed():
+                        logger.error("Detected broken socket while creating_threads")
+                        self.status = "creating_socket"
+                        continue
+                    logger.info("(re-)creating threads ...")
+                    if not self._create_threads():
+                        time.sleep(10)
+                        continue
+                    self.status = "execute_recreation_callback"
+
+                if self.status == "execute_recreation_callback":
+                    if (
+                        hasattr(self, "_on_recreation_callback")
+                        and self._on_recreation_callback is not None
+                    ):
+                        logger.debug(
+                            f"calling self._on_recreation_callback {self._on_recreation_callback.__name__}"
+                        )
+                        self._on_recreation_callback()
+                    else:
+                        logger.debug("No reasonable _on_recreation_callback found")
+                    self.status = "ok"
+            except Exception as e:
+                logger.error(
+                    "Monitoring Loop of Electrum-Socket got an Exception. This is critical if it's happening often!"
                 )
-                self._on_recreation_callback()
-            else:
-                logger.debug("No reasonable _on_recreation_callback found")
+                logger.exception(e)
+
+    @property
+    def thread_status(self):
+        """Returning a handy dict containing all informations about the current
+        thread_status.
+        e.g.:
+        {
+            'alive': ['recv', 'write', 'ping', 'notify'],
+            'not_alive': [],
+            'all_alive': True, 'any_alive': True,
+            'not_all_alive': False, 'not_any_alive': False,
+            'notify': True, 'ping': True, 'recv': True, 'write': True}
+        }
+        """
+        status_dict = {
+            "recv": self._recv_thread.is_alive()
+            if hasattr(self, "_recv_thread") and self._recv_thread
+            else False,
+            "write": self._write_thread.is_alive()
+            if hasattr(self, "_write_thread") and self._write_thread
+            else False,
+            "ping": self._ping_thread.is_alive()
+            if hasattr(self, "_ping_thread") and self._ping_thread
+            else False,
+            "notify": self._notify_thread.is_alive()
+            if hasattr(self, "_notify_thread") and self._notify_thread
+            else False,
+        }
+        any_alive = any(status_dict.values())
+        all_alive = all(status_dict.values())
+        alive_list = [key for key, value in status_dict.items() if value]
+        not_alive_list = [key for key, value in status_dict.items() if not value]
+        status_dict["alive"] = alive_list
+        status_dict["not_alive"] = not_alive_list
+        status_dict["any_alive"] = any_alive
+        status_dict["not_any_alive"] = not any_alive
+        status_dict["all_alive"] = all_alive
+        status_dict["not_all_alive"] = not all_alive
+        return status_dict
 
     def _write_loop(self):
         """
@@ -170,6 +294,7 @@ class ElectrumSocket:
                     # handle_exception(e)
                     sleep = 3
             time.sleep(sleep)
+        logger.info("Ended write-loop")
 
     def recv_loop(self):
         """
@@ -191,6 +316,7 @@ class ElectrumSocket:
                 logger.error(f"Error receiving data: {e}")
                 sleep = 3
             time.sleep(sleep)
+        logger.info("Ended recv-loop")
 
     def _ping_loop(self):
         """
@@ -216,7 +342,7 @@ class ElectrumSocket:
                 )
                 if tries > self.tries_threshold:
                     logger.error(
-                        "More than {self.tries_threshold} Ping failures for 60 seconds, Giving up!"
+                        f"More than {self.tries_threshold} Ping failures for {self.tries_threshold * self.sleep_ping_loop} seconds, Giving up!"
                     )
                     return  # will end the thread
 
@@ -241,6 +367,7 @@ class ElectrumSocket:
                     self._notifications.append(response)
                 if "id" in response:  # request
                     self._results[response["id"]] = response
+        logger.info("Ended recv")
 
     def _notify_loop(self):
         while self.running:
@@ -248,6 +375,7 @@ class ElectrumSocket:
                 data = self._notifications.pop()
                 self.notify(data)
             time.sleep(0.02)
+        logger.info("Ended notify-loop")
 
     def notify(self, data):
         if self._callback:

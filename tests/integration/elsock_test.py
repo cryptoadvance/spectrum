@@ -42,7 +42,7 @@ def test_elsock(caplog):
     )
     logger.info(f"{datetime.now()} Let's sleep for 5 seconds")
     time.sleep(5)
-    logger.info(f"{datetime.now()} Let's sleep for 5 seconds")
+    logger.info(f"{datetime.now()} Let's sleep for another 5 seconds")
     time.sleep(5)
     logger.info(
         f"{datetime.now()}--------------The socket connection should now work properly again-------------------------------------------------"
