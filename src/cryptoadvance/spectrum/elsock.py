@@ -2,13 +2,14 @@ import json
 import logging
 import random
 import socket
+import socks
 import ssl
 import sys
 import threading
 import time
 from queue import Queue
 
-from .util import FlaskThread, SpectrumException, handle_exception
+from .util import FlaskThread, SpectrumInternalException, handle_exception
 
 # TODO: normal handling of ctrl+C interrupt
 
@@ -35,6 +36,7 @@ class ElectrumSocket:
         callback=None,
         socket_recreation_callback=None,
         timeout=None,
+        proxy_url=None,
     ):
         """
         Initializes a new instance of the ElectrumSocket class.
@@ -49,10 +51,13 @@ class ElectrumSocket:
         Returns:
         None
         """
-        logger.info(f"Initializing ElectrumSocket with {host}:{port} (ssl: {ssl})")
+        logger.info(
+            f"Initializing ElectrumSocket with {host}:{port} (ssl: {ssl}) (proxy: {proxy_url})"
+        )
         self._host = host
         self._port = port
         self._use_ssl = use_ssl
+        self.proxy_url = proxy_url
         assert type(self._host) == str
         assert type(self._port) == int
         assert type(self._use_ssl) == bool
@@ -77,6 +82,17 @@ class ElectrumSocket:
             return self._status
         return "unknown"
 
+    @property
+    def uses_tor(self):
+        """Whether the underlying socket is using tor"""
+        if hasattr(self, "_uses_tor"):
+            return self._uses_tor
+        return False
+
+    @uses_tor.setter
+    def uses_tor(self, value: bool):
+        self._uses_tor = value
+
     @status.setter
     def status(self, value):
         logger.info(f"ElectrumSocket Status changed from {self.status} to {value}")
@@ -96,11 +112,24 @@ class ElectrumSocket:
 
         # Just to be sure, maybe close it upfront
         try:
+            # close if open
             if hasattr(self, "_socket"):
                 if not self.is_socket_closed():
                     self._socket.close()
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+            # maybe use tor
+            if self.proxy_url:
+                ip, port = parse_proxy_url(self.proxy_url)
+                socks.set_default_proxy(socks.PROXY_TYPE_SOCKS5, ip, port, True)
+                self._socket = socks.socksocket()
+                self.uses_tor = True
+            else:
+                self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.uses_tor = False
+
             logger.debug(f"socket created  : {self._socket}")
+
+            # maybe use ssl
             if self._use_ssl:
                 self._socket = ssl.wrap_socket(self._socket)
             logger.debug(f"socket wrapped  : {self._socket}")
@@ -435,3 +464,19 @@ def create_and_start_bg_thread(func):
     thread.start()
     logger.info(f"Started bg thread for {func.__name__}")
     return thread
+
+
+def parse_proxy_url(proxy_url: str):
+    """A proxy_url like socks5h://localhost:9050 will get parsed and returned into something like:
+    [ "localhost", "9050"]
+    the url HAS to start with socks5h
+    """
+    if not proxy_url.startswith("socks5h://"):
+        raise SpectrumInternalException(f"Wrong schema for proxy_url: {proxy_url}")
+    proxy_url = proxy_url.replace("socks5h://", "")
+    arr = proxy_url.split(":")
+    if len(arr) != 2:
+        raise SpectrumInternalException(
+            f"Wrong uri has more than one ':' : {proxy_url}"
+        )
+    return arr[0], arr[1]
