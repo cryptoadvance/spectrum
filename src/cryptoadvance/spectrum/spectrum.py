@@ -200,7 +200,6 @@ class Spectrum:
                 # ignore external scripts (labeled recepients)
                 if sc.index is None:
                     continue
-                logger.debug(f"Syncprocess subscr of {sc}")
                 subscription_logging_counter += 1
                 if subscription_logging_counter % 100 == 0:
                     self.sync_speed = subscription_logging_counter / int(
