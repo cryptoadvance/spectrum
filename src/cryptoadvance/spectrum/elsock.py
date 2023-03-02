@@ -49,8 +49,8 @@ class ElectrumSocket:
     sleep_ping_loop     = 10    # every x seconds we test the ability to call (ping)
     tries_threshold     = 3     # how many tries the ping might fail before it's giving up (monitor-loop will reestablish connection then)
 
-    sleep_recv_loop     = 0.01  # seconds , the shorter the better performance
-    sleep_write_loop    = 0.01  # seconds , the shorter the better performance
+    sleep_recv_loop     = 0.001  # seconds , the shorter the better performance
+    sleep_write_loop    = 0.001  # seconds , the shorter the better performance
     socket_timeout      = 10    # seconds for self._socket.recv(2048) (won't show up in the logs)
     # fmt: on
 
@@ -104,8 +104,9 @@ class ElectrumSocket:
         self._monitor_thread = create_and_start_bg_thread(self._monitor_loop)
         while not (self.status == "ok" or self.status.startswith("broken_")):
             time.sleep(0.2)
-        # Preventing to execute that callback for the first time, therefore
-        # setting it at the very end:
+        # Preventing to execute that callback for the first time
+        # as the spectrum can't use the connection (we're in the constructor),
+        # therefore setting it at the very end:
         self._on_recreation_callback = socket_recreation_callback
 
     @property
@@ -161,25 +162,35 @@ class ElectrumSocket:
                 except SpectrumInternalException as e:
                     logger.error(f"Cannot use proxy_url : {e}")
                     self.uses_tor = False
+                    self._socket.settimeout(5)
             else:
                 self.uses_tor = False
+
             self._socket = (
-                socks.socksocket()
+                socks.socksocket(socket.AF_INET, socket.SOCK_STREAM)
                 if self.uses_tor
                 else socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             )
+            self._socket.settimeout(20 if self.uses_tor else 5)
+            self._call_timeout = (
+                self._call_timeout * 4 if self.uses_tor else self._call_timeout
+            )
+
             logger.debug(f"socket created  : {self._socket}")
 
             # maybe use ssl
             if self._use_ssl:
                 self._socket = ssl.wrap_socket(self._socket)
-            logger.debug(f"socket wrapped  : {self._socket}")
-            self._socket.settimeout(5)
+                logger.debug(f"socket wrapped  : {self._socket}")
 
             try:
-                self._socket.connect((self._host, self._port))
+                logger.info(f"Connecting to {self._host}:{self._port}")
+                self._socket.connect((self._host, int(self._port)))
             except socket.gaierror as e:
                 logger.error(f"Internet connection might not be up: {e}")
+                return False
+            except socks.GeneralProxyError as e:
+                logger.error(f"Tor issue: {e}")
                 return False
             logger.debug(f"socket connected: {self._socket}")
             self._socket.settimeout(
@@ -284,7 +295,13 @@ class ElectrumSocket:
                         logger.debug(
                             f"calling self._on_recreation_callback {self._on_recreation_callback.__name__}"
                         )
-                        self._on_recreation_callback()
+                        try:
+                            self._on_recreation_callback()
+                        except Exception as e:
+                            logger.error(
+                                "_on_recreation_callback threw an exception {e}"
+                            )
+                            logger.exception(e)
                     else:
                         logger.debug("No reasonable _on_recreation_callback found")
 
@@ -551,4 +568,4 @@ def parse_proxy_url(proxy_url: str):
         raise SpectrumInternalException(
             f"Wrong uri has more than one ':' : {proxy_url}"
         )
-    return arr[0], arr[1]
+    return arr[0], int(arr[1])

@@ -178,37 +178,62 @@ class Spectrum:
         it calls a sync_script function to update the state. It also logs progress
         every 100 scripts subscribed to and updates self.progress_percent
         """
-        if self.sock.status != "ok":
-            logger.info("Not Syncing in offline-mode")
-            return
-        logger.info(f"Syncing ...")
-        subscription_logging_counter = 0
-        # subscribe to all scripts
-        all_scripts = Script.query.all()
-        all_scripts_len = len(all_scripts)
-        for sc in all_scripts:
-            # ignore external scripts (labeled recepients)
-            if sc.index is None:
-                continue
-            subscription_logging_counter += 1
-            if subscription_logging_counter % 100 == 0:
-                self.progress_percent = int(
-                    subscription_logging_counter / all_scripts_len * 100
-                )
-                logger.info(
-                    f"Now subscribed to {subscription_logging_counter} scripthashes ({self.progress_percent}%)"
-                )
-
-            try:
-                res = self.sock.call("blockchain.scripthash.subscribe", [sc.scripthash])
-            except ElSockTimeoutException:
-                logger.error("ElSockTimeoutException in _sync. Stopping Syncing!")
-                self.progress_percent = 0
+        ts = 0
+        try:
+            if self.sock.status != "ok":
+                logger.info("Syncprocess not starting, in offline-mode")
                 return
-            if res != sc.state:
-                self.sync_script(sc, res)
-        self.progress_percent = 100
-        logger.info(f"Finished Syncing {all_scripts_len} scripts")
+            if hasattr(self, "_sync_in_progress") and self._sync_in_progress:
+                logger.info("Syncprocess not starting, already running!")
+                return
+            self._sync_in_progress = True
+
+            subscription_logging_counter = 0
+            # subscribe to all scripts
+            all_scripts = Script.query.all()
+            all_scripts_len = len(all_scripts)
+            logger.info(
+                f"Syncprocess starting ({all_scripts_len} needs subscriptions)..."
+            )
+            ts = datetime.now()
+            for sc in all_scripts:
+                # ignore external scripts (labeled recepients)
+                if sc.index is None:
+                    continue
+                logger.debug(f"Syncprocess subscr of {sc}")
+                subscription_logging_counter += 1
+                if subscription_logging_counter % 100 == 0:
+                    self.sync_speed = subscription_logging_counter / int(
+                        (datetime.now() - ts).total_seconds()
+                    )
+                    self.progress_percent = int(
+                        subscription_logging_counter / all_scripts_len * 100
+                    )
+                    logger.info(
+                        f"Syncprocess now subscribed to {subscription_logging_counter} scripthashes ({self.progress_percent}%, {self.sync_speed} scripts/s)"
+                    )
+
+                try:
+                    res = self.sock.call(
+                        "blockchain.scripthash.subscribe", [sc.scripthash]
+                    )
+                except ElSockTimeoutException:
+                    logger.error(
+                        "Syncprocess got an ElSockTimeoutException. Stop Syncing!"
+                    )
+                    self.progress_percent = 0
+                    return
+                if res != sc.state:
+                    self.sync_script(sc, res)
+            self.progress_percent = 100
+        except Exception as e:
+            logger.exception(e)
+        finally:
+            self._sync_in_progress = False
+            ts_diff_s = int((datetime.now() - ts).total_seconds())
+            logger.info(
+                f"Syncprocess finished syncing {all_scripts_len} scripts in {ts_diff_s} with {self.sync_speed} scripts/s)"
+            )
 
     def sync(self, asyncc=True):
         if asyncc:
