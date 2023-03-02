@@ -49,8 +49,8 @@ class ElectrumSocket:
     sleep_ping_loop     = 10    # every x seconds we test the ability to call (ping)
     tries_threshold     = 3     # how many tries the ping might fail before it's giving up (monitor-loop will reestablish connection then)
 
-    sleep_recv_loop     = 0.001  # seconds , the shorter the better performance
-    sleep_write_loop    = 0.001  # seconds , the shorter the better performance
+    sleep_recv_loop     = 0.01  # seconds , the shorter the better performance but 0.001 might be much worse
+    sleep_write_loop    = 0.01  # seconds , the shorter the better performance but 0.001 might be much worse
     socket_timeout      = 10    # seconds for self._socket.recv(2048) (won't show up in the logs)
     # fmt: on
 
