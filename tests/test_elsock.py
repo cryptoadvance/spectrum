@@ -15,16 +15,18 @@ def test_elsock(config):
     with mock.patch("cryptoadvance.spectrum.elsock.socket.socket"):
         print(time.time())
         es = ElectrumSocket(
-            host=config.ELECTRUM_HOST, port=config.ELECTRUM_PORT, timeout=1
+            host=config.ELECTRUM_HOST,
+            port=config.ELECTRUM_PORT,
+            socket_timeout=1,
+            call_timeout=1,
         )
         with pytest.raises(ElSockTimeoutException):
             res = es.ping()
 
 
 def test_elsock_thread_status():
-    es = ElectrumSocket(host="notExisting", port=123, timeout=1)
+    es = ElectrumSocket(host="notExisting", port=123)
     es.running = False
-    time.sleep(2)
     write_mock = mock.MagicMock()
     write_mock.is_alive.return_value = False
     recv_mock = mock.MagicMock()

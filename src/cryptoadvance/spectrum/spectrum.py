@@ -95,12 +95,19 @@ class Spectrum:
     bestblockhash = ""  # hash of the current best block
 
     def __init__(
-        self, host="127.0.0.1", port=50001, ssl=True, datadir="data", app=None
+        self,
+        host="127.0.0.1",
+        port=50001,
+        ssl=True,
+        datadir="data",
+        app=None,
+        proxy_url=None,
     ):
         self.app = app
         self.host = host
         self.port = port
         self.ssl = ssl
+        self.proxy_url = proxy_url
         assert type(ssl) == bool, f"ssl is of type {type(ssl)}"
         self.datadir = datadir
         if not os.path.exists(self.txdir):
@@ -114,6 +121,7 @@ class Spectrum:
             callback=self.process_notification,
             socket_recreation_callback=self._sync,
             use_ssl=ssl,
+            proxy_url=proxy_url,
         )
 
         # self.sock = ElectrumSocket(host="35.201.74.156", port=143, callback=self.process_notification)
@@ -138,6 +146,11 @@ class Spectrum:
     def is_connected(self) -> bool:
         """Returns True if there is a socket connection, False otherwise."""
         return self.sock.status == "ok"
+
+    @property
+    def uses_tor(self):
+        """Whether the underlying ElectrumSocket uses Tor"""
+        return self.sock.uses_tor
 
     @property
     def txdir(self):

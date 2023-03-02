@@ -39,6 +39,10 @@ class SpectrumException(Exception):
     pass
 
 
+class SpectrumInternalException(Exception):
+    pass
+
+
 def handle_exception(exception):
     """prints the exception and most important the stacktrace"""
     logger.error(
