@@ -31,23 +31,85 @@ def test_elsock(caplog):
     ElectrumSocket.sleep_ping_loop = 1
     logger.info(f"{datetime.now()} Testing ElectrumSocket")
     elsock = ElectrumSocket(
-        host="electrum.emzy.de", port=50002, callback=callback, use_ssl=True, timeout=1
+        host="electrum.emzy.de",
+        port=50002,
+        callback=callback,
+        use_ssl=True,
+        call_timeout=1,
     )
     ts = elsock.ping()
     logger.info(f"First working ping in {ts} ms")
     logger.info(elsock._socket)
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from unknown to creating_socket"
+        )
+        == 1
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from creating_socket to creating_threads"
+        )
+        == 1
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from creating_threads to execute_recreation_callback"
+        )
+        == 1
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from execute_recreation_callback to ok"
+        )
+        == 1
+    )
     elsock._socket.close()
     logger.info(
-        f"{datetime.now()} ----------------NOW the socket was intentionally closed-----------------------------------------------------------"
+        f"{datetime.now()} =======================NOW the socket was intentionally closed==============================================="
     )
-    logger.info(f"{datetime.now()} Let's sleep for 5 seconds")
-    time.sleep(15)
-    logger.info(f"{datetime.now()} Let's sleep for another 50 seconds")
-    time.sleep(5)
+    # Should recover within 8 seconds ( 2 seconds buffer)
+    for i in range(0, 10):
+        logger.info(
+            f"...................................... timer: {i} seconds passed (elsock.is_socket_closed() returns {elsock.is_socket_closed()})"
+        )
+        time.sleep(1)
     logger.info(
-        f"{datetime.now()}--------------The socket connection should now work properly again-------------------------------------------------"
+        f"{datetime.now()}========================The socket connection should now work properly again================================"
     )
     logger.info(elsock._socket)
     ts = elsock.ping()
     logger.info(f"second working ping in {ts} ms")
     assert ts < 1
+    assert caplog.text.count("ElectrumSocket Status changed") == 9
+
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from ok to broken_killing_threads"
+        )
+        == 1
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from broken_killing_threads to creating_socket"
+        )
+        == 1
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from creating_socket to creating_threads"
+        )
+        == 2
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from creating_threads to execute_recreation_callback"
+        )
+        == 2
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from execute_recreation_callback to ok"
+        )
+        == 2
+    )
