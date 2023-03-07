@@ -178,7 +178,6 @@ class Spectrum:
         it calls a sync_script function to update the state. It also logs progress
         every 100 scripts subscribed to and updates self.progress_percent
         """
-        ts = 0
         try:
             if self.sock.status != "ok":
                 logger.info("Syncprocess not starting, in offline-mode")
@@ -225,14 +224,14 @@ class Spectrum:
                 if res != sc.state:
                     self.sync_script(sc, res)
             self.progress_percent = 100
-        except Exception as e:
-            logger.exception(e)
-        finally:
-            self._sync_in_progress = False
             ts_diff_s = int((datetime.now() - ts).total_seconds())
             logger.info(
                 f"Syncprocess finished syncing {all_scripts_len} scripts in {ts_diff_s} with {self.sync_speed} scripts/s)"
             )
+        except Exception as e:
+            logger.exception(e)
+        finally:
+            self._sync_in_progress = False
 
     def sync(self, asyncc=True):
         if asyncc:
