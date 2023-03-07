@@ -467,8 +467,6 @@ class ElectrumSocket:
                 #     f"Timeout in recv-loop, happens in {timeout_counter}/{read_counter} * 100 = {timeout_counter/read_counter * 100 }% of all reads. "
                 # )
                 # logger.error(f"consider to increase socket_timeout which is currently {self._socket_timeout}")
-            if not self.running:
-                break
             while not data.endswith(b"\n"):  # b"\n" is the end of the message
                 if not self.running:
                     break
