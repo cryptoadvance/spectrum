@@ -48,6 +48,7 @@ class ElectrumSocket:
     call_timeout        = 10    # the most relevant timeout as it affects business-methods (using the call-method)
     sleep_ping_loop     = 10    # every x seconds we test the ability to call (ping)
     tries_threshold     = 3     # how many tries the ping might fail before it's giving up (monitor-loop will reestablish connection then)
+    wait_on_exit_timeout= 120   # needs to be bigger than the socket_timeout
 
     sleep_recv_loop     = 0.01  # seconds , the shorter the better performance but 0.001 might be much worse
     sleep_write_loop    = 0.01  # seconds , the shorter the better performance but 0.001 might be much worse
@@ -96,10 +97,16 @@ class ElectrumSocket:
         self._call_timeout = (
             call_timeout if call_timeout else self.__class__.call_timeout
         )
+        self.wait_on_exit_timeout = (
+            self.__class__.call_timeout
+            if self._socket_timeout * 3 < self.__class__.call_timeout
+            else self._socket_timeout * 5
+        )
 
         self._results = {}  # store results of the calls here
         self._requests = []
         self._notifications = []
+        self._wanted_status = "ok"  # "ok" or "down"
         # The monitor-thread will create the other threads
         self._monitor_thread = create_and_start_bg_thread(self._monitor_loop)
         while not (self.status == "ok" or self.status.startswith("broken_")):
@@ -108,6 +115,12 @@ class ElectrumSocket:
         # as the spectrum can't use the connection (we're in the constructor),
         # therefore setting it at the very end:
         self._on_recreation_callback = socket_recreation_callback
+
+    def shutdown(self):
+        self._wanted_status = "down"
+
+    def startup(self):
+        self._wanted_status = "ok"
 
     @property
     def status(self) -> str:
@@ -309,11 +322,17 @@ class ElectrumSocket:
                     while self.thread_status[
                         "all_alive"
                     ]:  # most relevant is the ping_status
+                        if self._wanted_status != "ok":
+                            self.status = "broken_killing_threads"
+                            break
                         time.sleep(1)
                     self.status = "broken_killing_threads"
-                    logger.info(
-                        f"Issue with Electrum deteted, threads died: {','.join(self.thread_status['not_alive'])}"
-                    )
+                    if self._wanted_status != "down":
+                        logger.info(
+                            f"Issue with Electrum deteted, threads died: {','.join(self.thread_status['not_alive'])}"
+                        )
+                    else:
+                        logger.info(f"Shutting down ElectrumSocket ...")
 
                 if self.status == "broken_killing_threads":
                     logger.info("trying to stop all threads ...")
@@ -321,18 +340,36 @@ class ElectrumSocket:
                     # self._socket.setblocking(False)
                     counter = 0
                     log_frequency = 2
+                    start = time.time()
                     while self.thread_status["any_alive"]:
                         # Should we have a timeout? What to do then?
+                        wait_time = time.time() - start
+                        if wait_time > self.wait_on_exit_timeout:
+                            logger.error(
+                                f"Timeout waiting for threads: {' '.join(self.thread_status['alive'])}"
+                            )
+                            break
                         if counter % log_frequency == 0:
                             logger.info(
-                                f"Waiting for those threads to exit: {' '.join(self.thread_status['alive'])} ({counter}/{log_frequency})"
+                                f"Waiting for those threads to exit: {' '.join(self.thread_status['alive'])} ({counter}/{log_frequency}) ({wait_time}) ({self.socket_timeout})"
                             )
                             if counter > 10:
                                 log_frequency += 1
                         time.sleep(5)
                         counter += 1
-                    self.status = "creating_socket"
+                    if self._wanted_status == "down":
+                        self.status = "down"
+                    else:
+                        self.status = "creating_socket"
                     self.running = True
+
+                if self.status == "down":
+                    logger.info(
+                        "ElSock shutdown. Waiting for further wanted_status requests"
+                    )
+                    while self._wanted_status == "down":
+                        time.sleep(1)
+                    self.status = "creating_socket"
 
             except Exception as e:
                 logger.error(
