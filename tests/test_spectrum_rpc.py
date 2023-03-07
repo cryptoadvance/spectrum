@@ -24,6 +24,18 @@ def test_unknownmethod(caplog, client):
     assert result.status_code == 200
 
 
+def test_suppress_logging(caplog, client, app):
+    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG, logger="cryptoadvance.spectrum")
+    result = client.post("/", json={"method": "getmininginfo"})
+    assert result.status_code == 200
+    assert "RPC called getmininginfo" in caplog.text
+    app.config["SUPPRESS_JSONRPC_LOGGING"] = True
+    result = client.post("/", json={"method": "getmininginfo"})
+    assert result.status_code == 200
+    assert caplog.text.count("RPC called getmininginfo") == 1
+
+
 def test_getmininginfo(caplog, client):
     caplog.set_level(logging.INFO)
     caplog.set_level(logging.DEBUG, logger="cryptoadvance.spectrum")

@@ -141,7 +141,7 @@ class Spectrum:
 
     def stop(self):
         logger.info("Stopping Spectrum")
-        del self.sock
+        self.sock.shutdown()
 
     def is_connected(self) -> bool:
         """Returns True if there is a socket connection, False otherwise."""
@@ -178,7 +178,6 @@ class Spectrum:
         it calls a sync_script function to update the state. It also logs progress
         every 100 scripts subscribed to and updates self.progress_percent
         """
-        ts = 0
         try:
             if self.sock.status != "ok":
                 logger.info("Syncprocess not starting, in offline-mode")
@@ -225,14 +224,14 @@ class Spectrum:
                 if res != sc.state:
                     self.sync_script(sc, res)
             self.progress_percent = 100
-        except Exception as e:
-            logger.exception(e)
-        finally:
-            self._sync_in_progress = False
             ts_diff_s = int((datetime.now() - ts).total_seconds())
             logger.info(
                 f"Syncprocess finished syncing {all_scripts_len} scripts in {ts_diff_s} with {self.sync_speed} scripts/s)"
             )
+        except Exception as e:
+            logger.exception(e)
+        finally:
+            self._sync_in_progress = False
 
     def sync(self, asyncc=True):
         if asyncc:
@@ -471,9 +470,10 @@ class Spectrum:
         method = obj.get("method")
         id = obj.get("id", 0)
         params = obj.get("params", [])
-        logger.debug(
-            f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}"
-        )
+        if not self.app.config.get("SUPPRESS_JSONRPC_LOGGING", False):
+            logger.debug(
+                f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}"
+            )
         try:
             args = None
             kwargs = None
