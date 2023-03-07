@@ -987,7 +987,7 @@ class Spectrum:
         try:
             sc = EmbitScript.from_address(address)
         except EmbitError as e:
-            raise Spectrum.RPCError(f"Invalid Bitcoin address: {address}") from e
+            raise RPCError(f"Invalid Bitcoin address: {address}: {e}")
         script = Script.query.filter_by(script=sc.data.hex()).first()
         if not script:
             return 0
