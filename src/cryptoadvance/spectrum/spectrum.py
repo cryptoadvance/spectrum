@@ -141,7 +141,7 @@ class Spectrum:
 
     def stop(self):
         logger.info("Stopping Spectrum")
-        del self.sock
+        self.sock.shutdown()
 
     def is_connected(self) -> bool:
         """Returns True if there is a socket connection, False otherwise."""
