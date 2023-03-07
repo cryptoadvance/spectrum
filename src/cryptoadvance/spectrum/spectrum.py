@@ -470,9 +470,10 @@ class Spectrum:
         method = obj.get("method")
         id = obj.get("id", 0)
         params = obj.get("params", [])
-        logger.debug(
-            f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}"
-        )
+        if not self.app.config.get("SUPPRESS_JSONRPC_LOGGING", False):
+            logger.debug(
+                f"RPC called {method} {'wallet_name: ' + wallet_name if wallet_name else ''}"
+            )
         try:
             args = None
             kwargs = None
