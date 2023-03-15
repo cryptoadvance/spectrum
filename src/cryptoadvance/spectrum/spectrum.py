@@ -937,10 +937,7 @@ class Spectrum:
     ):
         txs = (
             db.session.query(Tx)
-            .filter(
-                Tx.wallet_id == wallet.id,
-                Tx.category.in_([TxCategory.SEND, TxCategory.RECEIVE]),
-            )
+            .filter(Tx.wallet_id == wallet.id)
             .offset(skip)
             .limit(count)
             .all()
