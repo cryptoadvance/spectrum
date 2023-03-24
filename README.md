@@ -2,7 +2,6 @@
 
 This is a electrum-adapter. It exposes a Bitcoin-Core style API while using an electron API in the backend. It might be useful in specific usecases, e.g. having better performance when connecting to a electrum-server via Tor. In order to do that, it needs a Database. Quite easily you can use a kind of builtin SQLite. Depending on your usecase, you might want to use an external DB.
 
-Note! Requires embit from master branch. (Still true?!)
 ## Modes of usage
 
 This can be used either in standalone mode or as a specter-extension. The second option is probably the main use-case.
