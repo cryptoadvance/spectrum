@@ -856,7 +856,7 @@ class Spectrum:
             ismine = sc.index is not None
         if ismine:
             ischange = sc.descriptor.internal
-            iswatchonly = sc.descriptor.private_descriptor is not None
+            iswatchonly = sc.descriptor.private_descriptor is None
         obj = {
             "address": address,
             "scriptPubKey": scriptpubkey.data.hex(),
