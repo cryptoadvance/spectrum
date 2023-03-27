@@ -361,7 +361,6 @@ class Spectrum:
                 )  # not existing, how can we fix that?
             # new tx
             else:
-
                 tx_details = {
                     "tx_hash": tx_magic,
                     "blockhash": blockheader.get("blockhash"),
@@ -843,6 +842,46 @@ class Spectrum:
             raise RPCError("No active descriptors", -500)
         # TODO: refill keypool, subscribe
         return desc.getscriptpubkey().address(self.network)
+
+    @walletrpc
+    def getaddressinfo(self, wallet, address: str):
+        ismine = False
+        ischange = False
+        iswatchonly = False
+        scriptpubkey = EmbitScript.from_address(address)
+        sc = Script.query.filter_by(
+            script=scriptpubkey.data.hex(), wallet=wallet
+        ).first()
+        if sc:
+            ismine = sc.index is not None
+        if ismine:
+            ischange = sc.descriptor.internal
+            iswatchonly = sc.descriptor.private_descriptor is None
+        obj = {
+            "address": address,
+            "scriptPubKey": scriptpubkey.data.hex(),
+            "ismine": ismine,
+            "ischange": ischange,
+            "solvable": ismine,
+            "iswatchonly": iswatchonly,
+        }
+        if ismine:
+            desc = sc.descriptor.get_descriptor()
+            derived_desc = desc.derive(sc.index).to_public()
+            # convert xpubs to pubs
+            for k in derived_desc.keys:
+                if k.is_extended:
+                    k.key = k.key.key
+            obj.update(
+                {
+                    "desc": add_checksum(str(derived_desc)),
+                    "parent_desc": add_checksum(str(desc.to_public())),
+                }
+            )
+        obj["labels"] = []
+        if sc and sc.label:
+            obj["labels"] = [sc.label]
+        return obj
 
     @walletrpc
     def listlabels(self, wallet, purpose=None):
