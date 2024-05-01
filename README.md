@@ -49,6 +49,13 @@ python3 -m cryptoadvance.specter server --config DevelopmentConfig --debug
 - add support for credentials / cookie file for RPC calls
 
 
+## Run the Tests
+
+```sh
+pip3 install -e ".[test]"
+pytest
+```
+
 ## Development
 
 Before your create a PR, make sure to [blackify](https://github.com/psf/black) all your changes. In order to automate that,
