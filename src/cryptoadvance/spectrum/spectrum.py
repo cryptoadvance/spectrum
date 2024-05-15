@@ -23,6 +23,7 @@ from embit.transaction import Transaction as EmbitTransaction
 from embit.transaction import TransactionInput, TransactionOutput
 from sqlalchemy.sql import func
 
+from .spectrum_error import RPCError
 from .db import UTXO, Descriptor, Script, Tx, TxCategory, Wallet, db
 from .elsock import ElectrumSocket, ElSockTimeoutException
 from .util import (
@@ -35,6 +36,7 @@ from .util import (
     sat_to_btc,
     scripthash,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -66,17 +68,6 @@ def walletrpc(f):
         return f(*args, **kwargs)
 
     return wrapper
-
-
-class RPCError(Exception):
-    """Should use one of : https://github.com/bitcoin/bitcoin/blob/v22.0/src/rpc/protocol.h#L25-L88"""
-
-    def __init__(self, message, code=-1):  # -1 is RPC_MISC_ERROR
-        self.message = message
-        self.code = code
-
-    def to_dict(self):
-        return {"code": self.code, "message": self.message}
 
 
 # we detect chain by looking at the hash of the 0th block
