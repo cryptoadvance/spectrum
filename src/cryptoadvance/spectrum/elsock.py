@@ -9,6 +9,7 @@ import threading
 import time
 from queue import Queue
 
+from .spectrum_error import RPCError
 from .util import FlaskThread, SpectrumInternalException, handle_exception
 
 # TODO: normal handling of ctrl+C interrupt
@@ -559,7 +560,10 @@ class ElectrumSocket:
                 )
         res = self._results.pop(uid)
         if "error" in res:
-            raise ValueError(res["error"])
+            if "code" in res["error"] and "message" in res["error"]:
+                raise RPCError(res["error"]["message"], res["error"]["code"])
+            else:
+                raise SpectrumInternalException(res)
         if "result" in res:
             return res["result"]
 
