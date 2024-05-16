@@ -559,13 +559,15 @@ class ElectrumSocket:
                     f"Timeout in call ({self._call_timeout} seconds) waiting for {method} on {self._socket}"
                 )
         res = self._results.pop(uid)
-        if "error" in res:
-            if "code" in res["error"] and "message" in res["error"]:
-                raise RPCError(res["error"]["message"], res["error"]["code"])
-            else:
-                raise SpectrumInternalException(res)
+        if isinstance(res, dict) and "error" in res:
+            error = res.get("error", {})
+            error_code = error.get("code")
+            error_message = error.get("message")
+            if error_code is not None and error_message is not None:
+                raise RPCError(error_message, error_code)
         if "result" in res:
             return res["result"]
+        raise SpectrumInternalException(res)
 
     def ping(self):
         start = time.time()
