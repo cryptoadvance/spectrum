@@ -127,3 +127,62 @@ def test_rescanblockchain(caplog, client):
 
     assert result.status_code == 200
     print(json.loads(result.data))
+
+
+def test_createwallet(caplog, client):
+    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="cryptoadvance.spectrum")
+
+    result = client.post(
+        "/wallet/some_shiny_new_wallet",
+        json={
+            "method": "createwallet",
+            "params": ["some_shiny_new_wallet"],
+            "jsonrpc": "2.0",
+            "id": 0,
+        },
+    )
+    print(json.loads(result.data))
+    assert result.status_code == 200
+
+
+def test_getreceivedbyaddress(caplog, client):
+    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="cryptoadvance.spectrum")
+
+    result = client.post(
+        "/wallet/some_nonexisting_wallet",
+        json={
+            "method": "getreceivedbyaddress",
+            "params": ["bc1q09vm5lfy0j5reeulh4x5752q25uqqvz34hufdl", 6],
+            "jsonrpc": "2.0",
+            "id": 0,
+        },
+    )
+    assert result.status_code == 200
+    assert (
+        json.loads(result.data)["error"]["message"]
+        == "Requested wallet some_nonexisting_wallet does not exist or is not loaded"
+    )
+    result = client.post(
+        "/",
+        json={
+            "method": "createwallet",
+            "params": ["some_new_wallet_to_test_getreceivedbyaddress"],
+            "jsonrpc": "2.0",
+            "id": 0,
+        },
+    )
+
+    result = client.post(
+        "/wallet/some_new_wallet_to_test_getreceivedbyaddress",
+        json={
+            "method": "getreceivedbyaddress",
+            "params": ["bc1qtr5cwxum3uwvyxgc8sgqm8gr658eksruyv3sty", 6],
+            "jsonrpc": "2.0",
+            "id": 0,
+        },
+    )
+    assert result.status_code == 200
+    print(json.loads(result.data))
+    assert False
