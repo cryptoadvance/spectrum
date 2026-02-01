@@ -1,7 +1,7 @@
 embit>=0.6.1
 Flask>=2.1.1
 Flask-SQLAlchemy==2.5.1
-sqlalchemy==2.0.30
+sqlalchemy>=1.4.42,<2.0
 psycopg2-binary
 requests>=2.26.0
 pysocks==1.7.1
