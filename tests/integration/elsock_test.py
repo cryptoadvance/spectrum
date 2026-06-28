@@ -54,7 +54,13 @@ def test_elsock(caplog):
     )
     assert (
         caplog.text.count(
-            "ElectrumSocket Status changed from creating_threads to execute_recreation_callback"
+            "ElectrumSocket Status changed from creating_threads to handshaking"
+        )
+        == 1
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from handshaking to execute_recreation_callback"
         )
         == 1
     )
@@ -74,6 +80,14 @@ def test_elsock(caplog):
             f"...................................... timer: {i} seconds passed (elsock.is_socket_closed() returns {elsock.is_socket_closed()})"
         )
         time.sleep(1)
+    for i in range(0, 20):
+        if elsock.status == "ok":
+            break
+        logger.info(
+            f"...................................... waiting for socket recovery: {i} seconds passed (status={elsock.status})"
+        )
+        time.sleep(1)
+    assert elsock.status == "ok"
     logger.info(
         f"{datetime.now()}========================The socket connection should now work properly again================================"
     )
@@ -81,7 +95,7 @@ def test_elsock(caplog):
     ts = elsock.ping()
     logger.info(f"second working ping in {ts} ms")
     assert ts < 10
-    assert caplog.text.count("ElectrumSocket Status changed") == 9
+    assert caplog.text.count("ElectrumSocket Status changed") == 11
 
     assert (
         caplog.text.count(
@@ -103,7 +117,13 @@ def test_elsock(caplog):
     )
     assert (
         caplog.text.count(
-            "ElectrumSocket Status changed from creating_threads to execute_recreation_callback"
+            "ElectrumSocket Status changed from creating_threads to handshaking"
+        )
+        == 2
+    )
+    assert (
+        caplog.text.count(
+            "ElectrumSocket Status changed from handshaking to execute_recreation_callback"
         )
         == 2
     )
